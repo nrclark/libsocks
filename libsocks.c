@@ -43,7 +43,7 @@ static ssize_t read_count(int filedes, char *buf, size_t nbyte)
     size_t total = 0;
 
     while (total != nbyte) {
-        result = read(filedes, buf, (total - nbyte));
+        result = read(filedes, buf, (nbyte - total));
 
         if (result < 0) {
             return result;
@@ -353,12 +353,20 @@ int socks_server_wait(int socket_fd)
     FD_SET(socket_fd, &read_fds);
     FD_SET(socket_fd, &error_fds);
 
-    int result = select(1, &read_fds, NULL, &error_fds, NULL);
+    int result = select(socket_fd + 1, &read_fds, NULL, &error_fds, NULL);
 
     /* We might normally use FD_ISSET here, but this isn't necessary
      * because we're only listening for one item (the socket). */
 
-    return result;
+    if (result < 0) {
+        return result;
+    }
+
+    if (result == 0) {
+        return -1;
+    }
+
+    return 0;
 }
 
 int socks_server_close(int socket_fd)
