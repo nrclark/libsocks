@@ -235,13 +235,17 @@ static int socks_process_request(int connection_fd, socks_callback_t callback,
 
 ssize_t socks_respond(int fd, const void *buf, uint32_t nbyte)
 {
-    int result = fd_unlock(fd);
+    ssize_t result = fd_unlock(fd);
 
     if (result < 0) {
         return result;
     }
 
-    return socks_send(fd, buf, nbyte);
+    result = socks_send(fd, buf, nbyte);
+    if (result < 0) {
+        return result;
+    }
+    return 0;
 }
 
 int socks_server_open(const char *filename)
