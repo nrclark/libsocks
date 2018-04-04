@@ -274,7 +274,7 @@ int socks_server_open(const char *filename)
         return -1;
     }
 
-    return result;
+    return socket_fd;
 }
 
 int socks_server_process(int socket_fd, socks_callback_t callback)
