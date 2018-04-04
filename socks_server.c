@@ -48,7 +48,7 @@ int main(int argc, char **argv)
 
     int socks_fd = socks_server_open(argv[1]);
 
-    if (socks_fd != 0) {
+    if (socks_fd < 0) {
         perror(NULL);
     }
 
