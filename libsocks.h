@@ -2,6 +2,7 @@
 #define _LIBSOCKS_H_
 
 #include <stdint.h>
+#include <sys/types.h>
 
 /* Your server callback should use socks_respond() to send a response (if
  * necessary). The return code of your callback is presented as the

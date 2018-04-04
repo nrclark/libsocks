@@ -1,34 +1,36 @@
+#include <errno.h>
 #include <libgen.h>
 #include <stdint.h>
 #include <stdio.h>
-#include <string.h>
 #include <stdlib.h>
+#include <string.h>
+
 #include "libsocks.h"
 
 const char *progname;
 static volatile char shutdown = 0;
 
-int callback(int response_fd, const char *input, uint32_t nbyte)
+static int callback(int response_fd, const char *input, uint32_t nbyte)
 {
     printf("responding to command: [%s]\n", input);
 
-    if (strcmp(input,"ping") == 0) {
+    if (strcmp(input, "ping") == 0) {
         return socks_respond(response_fd, "pong", sizeof("pong"));
     }
 
-    if (strcmp(input,"pong") == 0) {
+    if (strcmp(input, "pong") == 0) {
         return socks_respond(response_fd, "pango", sizeof("pango"));
     }
 
-    if (strcmp(input,"empty") == 0) {
+    if (strcmp(input, "empty") == 0) {
         return 0;
     }
 
-    if (strcmp(input,"fail") == 0) {
+    if (strcmp(input, "fail") == 0) {
         return -1;
     }
 
-    if (strcmp(input,"shutdown") == 0) {
+    if (strcmp(input, "shutdown") == 0) {
         shutdown = 1;
         return 0;
     }
@@ -52,7 +54,6 @@ int main(int argc, char **argv)
         perror(NULL);
     }
 
-
     while (1) {
         if (shutdown) {
             break;
@@ -68,16 +69,19 @@ int main(int argc, char **argv)
         result = socks_server_process(socks_fd, callback);
 
         if (result != 0) {
-            perror(NULL);
-            return result;
+            if (errno != 0) {
+                perror(NULL);
+                return result;
+            }
+            fprintf(stderr, "warn: command failed with code %d\n", result);
         }
     }
 
-    result = socks_server_close(result);
+    result = socks_server_close(socks_fd);
 
     if (result != 0) {
         perror(NULL);
     }
 
     return result;
-}    
+}

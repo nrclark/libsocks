@@ -6,4 +6,3 @@ int mkpath(const char *path, mode_t mode);
 extern const char *progname;
 
 #endif
-
