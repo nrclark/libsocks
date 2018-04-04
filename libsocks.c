@@ -76,67 +76,25 @@ static ssize_t write_count(int filedes, const char *buf, size_t nbyte)
 
 /*----------------------------------------------------------------------------*/
 
-static int fd_set_lockmode(int filedes, short mode)
+static int fd_socket_setflag(int filedes)
 {
-    int result;
-
-    struct flock lock = {
-        .l_type = mode,
-        .l_whence = SEEK_SET,
-        .l_start = 0,
-        .l_len = 0
-    };
-
-    while (1) {
-        result = fcntl(filedes, F_SETLKW, &lock);
-        if ((result == 0) || (errno != EINTR)) {
-            break;
-        }
-    }
-
-    return result;
+    return fcntl(filedes, F_SETOWN, -1);
 }
 
-static int fd_get_lockmode(int filedes, short *mode)
+static int fd_socket_clearflag(int filedes)
 {
-    int result;
-    struct flock lock;
-
-    while (1) {
-        result = fcntl(filedes, F_GETLK, &lock);
-        if ((result == 0) || (errno != EINTR)) {
-            break;
-        }
-    }
-
-    if (result == 0) {
-        *mode = lock.l_type;
-    }
-
-    return result;
+    return fcntl(filedes, F_SETOWN, 0);
 }
 
-static int fd_unlock(int filedes)
+static int fd_socket_checkflag(int filedes)
 {
-    int result = fd_set_lockmode(filedes, F_UNLCK);
-    return result;
-}
+    pid_t result = fcntl(filedes, F_GETOWN, 0);
 
-static int fd_lock(int filedes)
-{
-    int result = fd_set_lockmode(filedes, F_RDLCK);
-    return result;
-}
-
-static int fd_islocked(int filedes)
-{
-    short mode;
-
-    if (fd_get_lockmode(filedes, &mode) != 0) {
-        return -1;
+    if (errno == 0) {
+        return (result == -1);
     }
 
-    return (mode != F_UNLCK);
+    return -1;
 }
 
 /*----------------------------------------------------------------------------*/
@@ -213,7 +171,7 @@ static int socks_process_request(int connection_fd, socks_callback_t callback,
         return result;
     }
 
-    result = fd_lock(connection_fd);
+    result = fd_socket_setflag(connection_fd);
 
     if (result < 0) {
         return result;
@@ -221,7 +179,7 @@ static int socks_process_request(int connection_fd, socks_callback_t callback,
 
     result = callback(connection_fd, buffer, input_size);
 
-    if (fd_islocked(connection_fd)) {
+    if (fd_socket_checkflag(connection_fd)) {
         int response_result = socks_respond(connection_fd, "", 0);
         if (result == 0) {
             result = response_result;
@@ -235,13 +193,14 @@ static int socks_process_request(int connection_fd, socks_callback_t callback,
 
 ssize_t socks_respond(int fd, const void *buf, uint32_t nbyte)
 {
-    ssize_t result = fd_unlock(fd);
+    ssize_t result = fd_socket_clearflag(fd);
 
     if (result < 0) {
         return result;
     }
 
     result = socks_send(fd, buf, nbyte);
+
     if (result < 0) {
         return result;
     }
@@ -264,6 +223,12 @@ int socks_server_open(const char *filename)
 
     if (socket_fd < 0) {
         return socket_fd;
+    }
+
+    result = fd_socket_clearflag(socket_fd);
+
+    if (result < 0) {
+        return result;
     }
 
     result = bind(socket_fd, (struct sockaddr *) &address, sizeof(address));
