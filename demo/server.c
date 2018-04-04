@@ -30,14 +30,14 @@ int main() {
         msgsock = accept(sock, 0, 0);
         if (msgsock == -1) {
             perror("accept");
-        }else{
+        } else {
             do {
                 bzero(buf, sizeof(buf));
                 if ((rval = read(msgsock, buf, 1024)) < 0) {
                     perror("reading stream message");
-                }else if (rval == 0) {
+                } else if (rval == 0) {
                     printf("Ending connection\n");
-                }else{
+                } else {
                     printf("-->%s\n", buf);
                 }
             } while (rval > 0);
