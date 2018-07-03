@@ -312,7 +312,7 @@ ssize_t socks_client_process(const char *filename, const char *input,
     return result;
 }
 
-int socks_server_wait(int socket_fd)
+static int socks_server_select(int socket_fd, struct timeval *restrict timeout)
 {
     fd_set read_fds;
     fd_set error_fds;
@@ -322,7 +322,7 @@ int socks_server_wait(int socket_fd)
     FD_SET(socket_fd, &read_fds);
     FD_SET(socket_fd, &error_fds);
 
-    int result = select(socket_fd + 1, &read_fds, NULL, &error_fds, NULL);
+    int result = select(socket_fd + 1, &read_fds, NULL, &error_fds, timeout);
 
     /* We might normally use FD_ISSET here, but this isn't necessary
      * because we're only listening for one item (the socket). */
@@ -336,6 +336,17 @@ int socks_server_wait(int socket_fd)
     }
 
     return 0;
+}
+
+int socks_server_poll(int socket_fd)
+{
+    struct timeval nodelay = {.tv_sec = 0, .tv_usec = 0};
+    return socks_server_select(socket_fd, &nodelay);
+}
+
+int socks_server_wait(int socket_fd)
+{
+    return socks_server_select(socket_fd, NULL);
 }
 
 int socks_server_close(int socket_fd)

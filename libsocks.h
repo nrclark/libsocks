@@ -25,6 +25,7 @@ ssize_t socks_client_process(const char *filename, const char *input,
                              uint32_t nbyte, char *output, uint32_t bufsize);
 
 int socks_server_wait(int socket_fd);
+int socks_server_poll(int socket_fd);
 
 enum {socks_packet_max = 4096};
 
