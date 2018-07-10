@@ -17,15 +17,23 @@ static const char path_toolong[] = "%s: error: pathname too long\n";
 
 /*----------------------------------------------------------------------------*/
 
-static void serialize_uint32(char *target, uint32_t input)
+/** @brief Serializes a uint32_t into a little-endian 4-char array. Used to
+ * ensure predictable serialization across platforms. 
+ * @param[in] input Value to serialize
+ * @param[out] output Destination for serialized data */
+static void serialize_uint32(uint32_t input, char output[4])
 {
-    target[0] = (input >> 0) & 0xFF;
-    target[1] = (input >> 8) & 0xFF;
-    target[2] = (input >> 16) & 0xFF;
-    target[3] = (input >> 24) & 0xFF;
+    output[0] = (input >> 0) & 0xFF;
+    output[1] = (input >> 8) & 0xFF;
+    output[2] = (input >> 16) & 0xFF;
+    output[3] = (input >> 24) & 0xFF;
 }
 
-static uint32_t deserialize_uint32(const char *input)
+/** @brief Deserializes a little-endian 4-char array and returns the result.
+ * Used to ensure predictable deserialization across platforms. 
+ * @param[in] input Serialized data
+ * @return Deserialized uint32 */
+static uint32_t deserialize_uint32(const char input[4])
 {
     uint32_t result = 0;
 
@@ -37,12 +45,20 @@ static uint32_t deserialize_uint32(const char *input)
     return result;
 }
 
+/** @brief Reads a specified number of bytes from a file-descriptor. Retries
+ * until enough bytes are received (or until the read command fails).
+ * @param[in] filedes File descriptor used to read data
+ * @param[out] buf Pointer to target data buffer
+ * @param[in] nbyte Number of bytes to read
+ * @return Number of bytes retrieved, or -1 in the event of an error.
+ * @retval <0 A read error occured, and errno was set accordingly. 
+ * @retval >=0 Number of bytes retrieved. */
 static ssize_t read_count(int filedes, char *buf, size_t nbyte)
 {
     ssize_t result;
     size_t total = 0;
 
-    while (total != nbyte) {
+    while (total < nbyte) {
         result = read(filedes, buf, (nbyte - total));
 
         if (result < 0) {
@@ -55,6 +71,14 @@ static ssize_t read_count(int filedes, char *buf, size_t nbyte)
     return (ssize_t) nbyte;
 }
 
+/** @brief Writes a specified number of bytes to a file-descriptor. Retries
+ * until enough bytes are written (or until the write command fails).
+ * @param[in] filedes File descriptor used to write data
+ * @param[in] buf Pointer to input data buffer
+ * @param[in] nbyte Number of bytes to write
+ * @return Number of bytes written, or -1 in the event of an error.
+ * @retval <0 A write error occured, and errno was set accordingly. 
+ * @retval >=0 Number of bytes written. */
 static ssize_t write_count(int filedes, const char *buf, size_t nbyte)
 {
     ssize_t result;
@@ -148,7 +172,7 @@ static ssize_t socks_send(int fd, const void *buf, uint32_t nbyte)
     char header[4];
     ssize_t result;
 
-    serialize_uint32(header, nbyte);
+    serialize_uint32(nbyte, header);
     result = write_count(fd, header, 4);
 
     if (result < 0) {
