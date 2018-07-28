@@ -52,6 +52,9 @@ int main(int argc, char **argv)
 
     if (socks_fd < 0) {
         perror(NULL);
+        fprintf(stderr, "%s: couldn't open socketfile [%s] (%s)\n",
+                argv[0], argv[1], strerror(errno));
+        exit(socks_fd);
     }
 
     while (1) {
