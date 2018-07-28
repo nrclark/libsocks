@@ -4,11 +4,26 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
 
 #include "libsocks.h"
 
 const char *progname;
 static volatile char shutdown = 0;
+
+static int sleep_ms(unsigned int count)
+{
+    unsigned int seconds = (count / 1000);
+    unsigned int msec = count - (seconds * 1000);
+    long int nsec = msec * 1000000L;
+
+    struct timespec duration = {
+        .tv_sec = seconds,
+        .tv_nsec = nsec
+    };
+
+    return nanosleep(&duration, NULL);
+}
 
 static int callback(int response_fd, const char *input, uint32_t nbyte)
 {
@@ -28,6 +43,11 @@ static int callback(int response_fd, const char *input, uint32_t nbyte)
 
     if (strcmp(input, "fail") == 0) {
         return -1;
+    }
+
+    if (strcmp(input, "sleep") == 0) {
+        sleep_ms(5000);
+        return 0;
     }
 
     if (strcmp(input, "shutdown") == 0) {

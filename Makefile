@@ -181,3 +181,9 @@ clean::
 	rm -f libsocks.a
 
 #------------------------------------------------------------------------------#
+
+server: socks_server.o libsocks.a
+	$(CC) $(CFLAGS) $^ -o $@
+
+client: socks_client.o libsocks.a
+	$(CC) $(CFLAGS) $^ -o $@
