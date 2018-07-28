@@ -1,14 +1,8 @@
 #include <errno.h>
-#include <fcntl.h>
 #include <limits.h>
-#include <stdint.h>
 #include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
 #include <sys/socket.h>
-#include <sys/stat.h>
 #include <sys/un.h>
-
 #include <unistd.h>
 
 #include "libsocks.h"
@@ -18,7 +12,7 @@ static const char path_toolong[] = "%s: error: pathname too long\n";
 /*----------------------------------------------------------------------------*/
 
 /** @brief Serializes a uint32_t into a little-endian 4-char array. Used to
- * ensure predictable serialization across platforms. 
+ * ensure predictable serialization across platforms.
  * @param[in] input Value to serialize
  * @param[out] output Destination for serialized data */
 static void serialize_uint32(uint32_t input, char output[4])
@@ -30,7 +24,7 @@ static void serialize_uint32(uint32_t input, char output[4])
 }
 
 /** @brief Deserializes a little-endian 4-char array and returns the result.
- * Used to ensure predictable deserialization across platforms. 
+ * Used to ensure predictable deserialization across platforms.
  * @param[in] input Serialized data
  * @return Deserialized uint32 */
 static uint32_t deserialize_uint32(const char input[4])
@@ -51,15 +45,14 @@ static uint32_t deserialize_uint32(const char input[4])
  * @param[out] buf Pointer to target data buffer
  * @param[in] nbyte Number of bytes to read
  * @return Number of bytes retrieved, or -1 in the event of an error.
- * @retval <0 A read error occured, and errno was set accordingly. 
+ * @retval <0 A read error occured, and errno was set accordingly.
  * @retval >=0 Number of bytes retrieved. */
 static ssize_t read_count(int filedes, char *buf, size_t nbyte)
 {
-    ssize_t result;
     size_t total = 0;
 
     while (total < nbyte) {
-        result = read(filedes, buf, (nbyte - total));
+        ssize_t result = read(filedes, buf, (nbyte - total));
 
         if (result < 0) {
             return result;
@@ -77,15 +70,14 @@ static ssize_t read_count(int filedes, char *buf, size_t nbyte)
  * @param[in] buf Pointer to input data buffer
  * @param[in] nbyte Number of bytes to write
  * @return Number of bytes written, or -1 in the event of an error.
- * @retval <0 A write error occured, and errno was set accordingly. 
+ * @retval <0 A write error occured, and errno was set accordingly.
  * @retval >=0 Number of bytes written. */
 static ssize_t write_count(int filedes, const char *buf, size_t nbyte)
 {
-    ssize_t result;
     size_t remaining = nbyte;
 
     while (remaining != 0) {
-        result = write(filedes, buf, remaining);
+        ssize_t result = write(filedes, buf, remaining);
 
         if (result < 0) {
             return result;
@@ -96,29 +88,6 @@ static ssize_t write_count(int filedes, const char *buf, size_t nbyte)
     }
 
     return (ssize_t) nbyte;
-}
-
-/*----------------------------------------------------------------------------*/
-
-static int fd_socket_setflag(int filedes)
-{
-    return fcntl(filedes, F_SETOWN, -1);
-}
-
-static int fd_socket_clearflag(int filedes)
-{
-    return fcntl(filedes, F_SETOWN, 0);
-}
-
-static int fd_socket_checkflag(int filedes)
-{
-    pid_t result = fcntl(filedes, F_GETOWN, 0);
-
-    if (errno == 0) {
-        return (result == -1);
-    }
-
-    return -1;
 }
 
 /*----------------------------------------------------------------------------*/
@@ -187,6 +156,7 @@ static int socks_process_request(int connection_fd, socks_callback_t callback,
 {
     int result;
     char buffer[input_size + 1];
+    int response_result;
 
     buffer[input_size + 1] = '\x00';
     result = read_count(connection_fd, buffer, input_size);
@@ -195,19 +165,11 @@ static int socks_process_request(int connection_fd, socks_callback_t callback,
         return result;
     }
 
-    result = fd_socket_setflag(connection_fd);
-
-    if (result < 0) {
-        return result;
-    }
-
     result = callback(connection_fd, buffer, input_size);
+    response_result = socks_respond(connection_fd, "", 0);
 
-    if (fd_socket_checkflag(connection_fd)) {
-        int response_result = socks_respond(connection_fd, "", 0);
-        if (result == 0) {
-            result = response_result;
-        }
+    if (result == 0) {
+        result = response_result;
     }
 
     return result;
@@ -217,18 +179,7 @@ static int socks_process_request(int connection_fd, socks_callback_t callback,
 
 ssize_t socks_respond(int fd, const void *buf, uint32_t nbyte)
 {
-    ssize_t result = fd_socket_clearflag(fd);
-
-    if (result < 0) {
-        return result;
-    }
-
-    result = socks_send(fd, buf, nbyte);
-
-    if (result < 0) {
-        return result;
-    }
-    return 0;
+    return socks_send(fd, buf, nbyte);
 }
 
 int socks_server_open(const char *filename)
@@ -247,12 +198,6 @@ int socks_server_open(const char *filename)
 
     if (socket_fd < 0) {
         return socket_fd;
-    }
-
-    result = fd_socket_clearflag(socket_fd);
-
-    if (result < 0) {
-        return result;
     }
 
     result = bind(socket_fd, (struct sockaddr *) &address, sizeof(address));
