@@ -24,7 +24,7 @@ lint_flags.mk:
 
 LINT_BLACKLIST := \
     -Wtraditional -Wformat-nonliteral -Wtraditional-conversion -Wpadded \
-	-Wunused-macros
+    -Wunused-macros -Wabi
 
 LINT_CFLAGS := $(strip \
     -Wall -Wextra -pedantic \
@@ -61,10 +61,21 @@ format: $(foreach x,$(wildcard *.h),format-$x)
 
 #------------------------------------------------------------------------------#
 
+COMMA := ,
+EMPTY :=
+SPACE := $(EMPTY) $(EMPTY)
+CLANG_TIDY_BLACKLIST := $(strip \
+    -llvm-header-guard -android-cloexec-open \
+    -android-cloexec-accept -hicpp-signed-bitwise -hicpp-no-assembler \
+)
+
+TIDY_BLACKLIST_STRING := $(strip $(if $(CLANG_TIDY_BLACKLIST),\
+    $(COMMA)$(subst $(SPACE),$(COMMA),$(CLANG_TIDY_BLACKLIST)),))
+
 tidy-%: %
 	@echo Analyzing $* with clang-tidy/clang-check...
 	@clang-tidy \
-	    "-checks=*,-llvm-header-guard,-android-cloexec-open,-hicpp-no-assembler" \
+	    "-checks=*$(TIDY_BLACKLIST_STRING)" \
 	    "-header-filter=.*" $* -- 2>/dev/null | \
 	    (grep -iP "(warning|error)[:]" -A2 --color || true)
 	@clang-check -analyze $* --
@@ -145,35 +156,28 @@ endif
 CFLAGS := $(strip $(CFLAGS))
 
 %.o: %.c
-	$(CC) -c $(CFLAGS) $^ -o $@
+	$(CC) -c $(CFLAGS) $< -o $@
 
 clean::
 	rm -f *.o
 
 #------------------------------------------------------------------------------#
 
-LIBPROC_SRC := $(filter libproc%,$(wildcard *.c))
-LIBPROC_SRC += $(filter libproc%,$(wildcard *.h))
-LIBPROC_SRC += _pvt_libproc.h
+LIBSOCKS_SRC := $(filter libsocks%,$(wildcard *.c))
+LIBSOCKS_SRC += $(filter libsocks%,$(wildcard *.h))
+LIBSOCKS_SRC += _pvt_libsocks.h
 
-libproc.a: libproc.o
+libsocks.o: libsocks.h
+
+libsocks.a: libsocks.o
 	rm -f $@
 	ar rcs $@ $^
 
-lint-libproc: $(foreach x,$(LIBPROC_SRC),lint-$x)
-format-libproc: $(foreach x,$(LIBPROC_SRC),format-$x)
-tidy-libproc: $(foreach x,$(LIBPROC_SRC),tidy-$x)
+lint-libsocks: $(foreach x,$(LIBSOCKS_SRC),lint-$x)
+format-libsocks: $(foreach x,$(LIBSOCKS_SRC),format-$x)
+tidy-libsocks: $(foreach x,$(LIBSOCKS_SRC),tidy-$x)
 
 clean::
-	rm -f libproc.a
+	rm -f libsocks.a
 
 #------------------------------------------------------------------------------#
-
-proctest: proctest.c libproc.a
-	$(CC) $(CFLAGS) $^ -o $@
-
-clean::
-	rm -f proctest
-
-#------------------------------------------------------------------------------#
-
