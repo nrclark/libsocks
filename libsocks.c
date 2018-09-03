@@ -158,7 +158,7 @@ static int socks_process_request(int connection_fd, socks_callback_t callback,
     char buffer[input_size + 1];
     int response_result;
 
-    buffer[input_size + 1] = '\x00';
+    buffer[input_size] = '\x00';
     result = read_count(connection_fd, buffer, input_size);
 
     if (result < 0) {
