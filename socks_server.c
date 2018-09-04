@@ -85,7 +85,7 @@ int main(int argc, char **argv)
         result = socks_server_wait(socks_fd);
 
         if (result != 0) {
-            perror(NULL);
+            fprintf(stderr, "socks_erver_wait: failed (%s)\n", strerror(errno));
             return result;
         }
 
@@ -93,7 +93,7 @@ int main(int argc, char **argv)
 
         if (result != 0) {
             if (errno != 0) {
-                perror(NULL);
+                fprintf(stderr, "socks_server_process: failed (%s)\n", strerror(errno));
                 return result;
             }
             fprintf(stderr, "warn: command failed with code %d\n", result);
