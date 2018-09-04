@@ -29,7 +29,7 @@ LINT_BLACKLIST := \
     -Wunused-macros -Wabi
 
 LINT_CFLAGS := $(strip \
-    -Wall -Wextra -pedantic \
+    -Wall -Wextra -pedantic -std=c99 \
     $(filter-out $(LINT_BLACKLIST),$(LINT_CFLAGS)) \
     -Wno-system-headers \
 )
