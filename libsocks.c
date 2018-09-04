@@ -1,5 +1,6 @@
 #include <errno.h>
 #include <limits.h>
+#include <fcntl.h>
 #include <stdio.h>
 #include <sys/socket.h>
 #include <sys/un.h>
@@ -90,6 +91,27 @@ static ssize_t write_count(int filedes, const char *buf, size_t nbyte)
     return (ssize_t) nbyte;
 }
 
+static int fd_socket_setflag(int fd)
+{
+    return fcntl(fd, F_SETOWN, getpid());
+}
+
+static int fd_socket_clearflag(int fd)
+{
+    return fcntl(fd, F_SETOWN, 0);
+}
+
+static int fd_socket_checkflag(int fd)
+{
+    pid_t result = fcntl(fd, F_GETOWN, 0);
+
+    if (errno == 0) {
+        return (result != 0);
+    }
+
+    return -1;
+}
+
 /*----------------------------------------------------------------------------*/
 
 #define get_size(type, field) sizeof(((type *)0)->field)
@@ -156,7 +178,7 @@ static int socks_process_request(int connection_fd, socks_callback_t callback,
 {
     int result;
     char buffer[input_size + 1];
-    int response_result;
+    int callback_result;
 
     buffer[input_size] = '\x00';
     result = read_count(connection_fd, buffer, input_size);
@@ -165,11 +187,30 @@ static int socks_process_request(int connection_fd, socks_callback_t callback,
         return result;
     }
 
-    result = callback(connection_fd, buffer, input_size);
-    response_result = socks_respond(connection_fd, "", 0);
+    result = fd_socket_clearflag(connection_fd);
+
+    if (result < 0) {
+        fprintf(stderr, "couldn't clear flag\n");
+        return result;
+    }
+
+    callback_result = callback(connection_fd, buffer, input_size);
+
+    switch (fd_socket_checkflag(connection_fd)) {
+        case 0:
+            result = socks_respond(connection_fd, "", 0);
+            break;
+
+        case 1:
+            break;
+
+        default:
+            fprintf(stderr, "couldn't check flag\n");
+            break;
+    }
 
     if (result == 0) {
-        result = response_result;
+        return callback_result;
     }
 
     return result;
@@ -179,6 +220,10 @@ static int socks_process_request(int connection_fd, socks_callback_t callback,
 
 ssize_t socks_respond(int fd, const void *buf, uint32_t nbyte)
 {
+    if (fd_socket_setflag(fd) != 0) {
+        fprintf(stderr, "setflag failed!\n");
+    }
+
     return socks_send(fd, buf, nbyte);
 }
 
@@ -241,46 +286,6 @@ int socks_server_process(int socket_fd, socks_callback_t callback)
     return result;
 }
 
-ssize_t socks_client_process(const char *filename, const char *input,
-                             uint32_t nbyte, char *output, uint32_t bufsize)
-{
-    ssize_t result;
-    int socket_fd;
-    struct sockaddr_un address;
-
-    result = socks_address_make(filename, &address);
-
-    if (result < 0) {
-        return result;
-    }
-
-    socket_fd = socket(AF_UNIX, SOCK_SEQPACKET, 0);
-
-    if (socket_fd < 0) {
-        fprintf(stderr, "Couldn't open socket [%s]\n", filename);
-        return socket_fd;
-    }
-
-    result = connect(socket_fd, (struct sockaddr *) &address, sizeof(address));
-
-    if (result != 0) {
-        fprintf(stderr, "Couldn't connect to socket [%s]\n", filename);
-        close(socket_fd);
-        return result;
-    }
-
-    result = socks_send(socket_fd, input, nbyte);
-
-    if (result < 0) {
-        close(socket_fd);
-        return result;
-    }
-
-    result = socks_recv(socket_fd, output, bufsize);
-    close(socket_fd);
-    return result;
-}
-
 static int socks_server_select(int socket_fd, struct timeval *restrict timeout)
 {
     fd_set read_fds;
@@ -321,4 +326,46 @@ int socks_server_wait(int socket_fd)
 int socks_server_close(int socket_fd)
 {
     return close(socket_fd);
+}
+
+/*----------------------------------------------------------------------------*/
+
+ssize_t socks_client_process(const char *filename, const char *input,
+                             uint32_t nbyte, char *output, uint32_t bufsize)
+{
+    ssize_t result;
+    int socket_fd;
+    struct sockaddr_un address;
+
+    result = socks_address_make(filename, &address);
+
+    if (result < 0) {
+        return result;
+    }
+
+    socket_fd = socket(AF_UNIX, SOCK_SEQPACKET, 0);
+
+    if (socket_fd < 0) {
+        fprintf(stderr, "Couldn't open socket [%s]\n", filename);
+        return socket_fd;
+    }
+
+    result = connect(socket_fd, (struct sockaddr *) &address, sizeof(address));
+
+    if (result != 0) {
+        fprintf(stderr, "Couldn't connect to socket [%s]\n", filename);
+        close(socket_fd);
+        return result;
+    }
+
+    result = socks_send(socket_fd, input, nbyte);
+
+    if (result < 0) {
+        close(socket_fd);
+        return result;
+    }
+
+    result = socks_recv(socket_fd, output, bufsize);
+    close(socket_fd);
+    return result;
 }
