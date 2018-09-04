@@ -1,6 +1,8 @@
 .SUFFIXES:
 CC := gcc
 
+default: libsocks.a
+
 #------------------------------------------------------------------------------#
 
 lint_flags.mk:
@@ -44,6 +46,9 @@ $(foreach x,$(wildcard *.h),$(eval lint-$x:))
 lint: $(foreach x,$(wildcard *.c),lint-$x)
 lint: $(foreach x,$(wildcard *.h),lint-$x)
 
+clean::
+	rm -f *.plist
+
 #------------------------------------------------------------------------------#
 
 format-%: % uncrustify.cfg
@@ -78,7 +83,7 @@ tidy-%: %
 	    "-checks=*$(TIDY_BLACKLIST_STRING)" \
 	    "-header-filter=.*" $* -- 2>/dev/null | \
 	    (grep -iP "(warning|error)[:]" -A2 --color || true)
-	@clang-check -analyze $* --
+	@clang-check -analyze $* -- && rm $(basename $*).plist
 
 $(foreach x,$(wildcard *.c),$(eval tidy-$x:))
 $(foreach x,$(wildcard *.h),$(eval tidy-$x:))
