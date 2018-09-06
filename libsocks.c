@@ -122,7 +122,9 @@ static int fd_socket_checkflag(int fd)
 
 enum {
     sun_path_size = get_size(struct sockaddr_un, sun_path) - 1,
-    address_maxlen = (sun_path_size > PATH_MAX) ? sun_path_size : PATH_MAX
+    address_maxlen = (sun_path_size > PATH_MAX) ? sun_path_size : PATH_MAX,
+    backlog_target = 16,
+    backlog_size = (backlog_target < SOMAXCONN) ? backlog_target : SOMAXCONN
 };
 
 static int socks_address_make(const char *filename, struct sockaddr_un *result)
@@ -277,7 +279,7 @@ int socks_server_open(const char *filename)
         return -1;
     }
 
-    result = listen(socket_fd, 4);
+    result = listen(socket_fd, backlog_size);
 
     if (result != 0) {
         return -1;
