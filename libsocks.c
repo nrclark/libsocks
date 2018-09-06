@@ -235,15 +235,11 @@ static int socks_server_select(int socket_fd, struct timeval *restrict timeout)
     /* We might normally use FD_ISSET here, but this isn't necessary
      * because we're only listening for one item (the socket). */
 
-    if (result < 0) {
-        return result;
+    if (result > 0) {
+        return 1;
     }
 
-    if (result == 0) {
-        return -1;
-    }
-
-    return 0;
+    return result;
 }
 
 /*----------------------------------------------------------------------------*/
@@ -319,12 +315,28 @@ int socks_server_process(int socket_fd, socks_callback_t callback)
 int socks_server_poll(int socket_fd)
 {
     struct timeval nodelay = {.tv_sec = 0, .tv_usec = 0};
-    return socks_server_select(socket_fd, &nodelay);
+    int result = socks_server_select(socket_fd, &nodelay);
+
+    if (result > 0) {
+        return 1;
+    }
+
+    return result;
 }
 
 int socks_server_wait(int socket_fd)
 {
-    return socks_server_select(socket_fd, NULL);
+    int result = socks_server_select(socket_fd, NULL);
+
+    if (result > 0) {
+        return 0;
+    }
+
+    if (result == 0) {
+        return -1;
+    }
+
+    return result;
 }
 
 int socks_server_close(int socket_fd)
@@ -335,7 +347,7 @@ int socks_server_close(int socket_fd)
 /*----------------------------------------------------------------------------*/
 
 ssize_t socks_client_process(const char *filename, const char *input,
-                             uint32_t nbyte, char *output, uint32_t bufsize)
+                             uint32_t nbyte, char *output, uint32_t maxlen)
 {
     ssize_t result;
     int socket_fd;
@@ -369,7 +381,7 @@ ssize_t socks_client_process(const char *filename, const char *input,
         return result;
     }
 
-    result = socks_recv(socket_fd, output, bufsize);
+    result = socks_recv(socket_fd, output, maxlen);
     close(socket_fd);
     return result;
 }
