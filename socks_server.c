@@ -30,11 +30,11 @@ static int callback(int response_fd, const char *input, uint32_t nbyte)
     printf("responding to command: [%s]\n", input);
 
     if (strcmp(input, "ping") == 0) {
-        return socks_respond(response_fd, "pong", sizeof("pong"));
+        return socks_server_respond(response_fd, "pong", sizeof("pong"));
     }
 
     if (strcmp(input, "pong") == 0) {
-        return socks_respond(response_fd, "pango", sizeof("pango"));
+        return socks_server_respond(response_fd, "pango", sizeof("pango"));
     }
 
     if (strcmp(input, "empty") == 0) {
@@ -55,7 +55,7 @@ static int callback(int response_fd, const char *input, uint32_t nbyte)
         return 0;
     }
 
-    return socks_respond(response_fd, input, nbyte);
+    return socks_server_respond(response_fd, input, nbyte);
 }
 
 int main(int argc, char **argv)

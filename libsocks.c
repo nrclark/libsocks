@@ -202,7 +202,7 @@ static int socks_process_request(int connection_fd, socks_callback_t callback,
 
     switch (fd_socket_checkflag(connection_fd)) {
         case 0:
-            result = socks_respond(connection_fd, "", 0);
+            result = socks_server_respond(connection_fd, "", 0);
             break;
 
         case 1:
@@ -220,9 +220,35 @@ static int socks_process_request(int connection_fd, socks_callback_t callback,
     return result;
 }
 
+static int socks_server_select(int socket_fd, struct timeval *restrict timeout)
+{
+    fd_set read_fds;
+    fd_set error_fds;
+
+    FD_ZERO(&read_fds);
+    FD_ZERO(&error_fds);
+    FD_SET(socket_fd, &read_fds);
+    FD_SET(socket_fd, &error_fds);
+
+    int result = select(socket_fd + 1, &read_fds, NULL, &error_fds, timeout);
+
+    /* We might normally use FD_ISSET here, but this isn't necessary
+     * because we're only listening for one item (the socket). */
+
+    if (result < 0) {
+        return result;
+    }
+
+    if (result == 0) {
+        return -1;
+    }
+
+    return 0;
+}
+
 /*----------------------------------------------------------------------------*/
 
-ssize_t socks_respond(int fd, const void *buf, uint32_t nbyte)
+ssize_t socks_server_respond(int fd, const void *buf, uint32_t nbyte)
 {
     if (fd_socket_setflag(fd) != 0) {
         fprintf(stderr, "setflag failed!\n");
@@ -288,32 +314,6 @@ int socks_server_process(int socket_fd, socks_callback_t callback)
     close(connection_fd);
 
     return result;
-}
-
-static int socks_server_select(int socket_fd, struct timeval *restrict timeout)
-{
-    fd_set read_fds;
-    fd_set error_fds;
-
-    FD_ZERO(&read_fds);
-    FD_ZERO(&error_fds);
-    FD_SET(socket_fd, &read_fds);
-    FD_SET(socket_fd, &error_fds);
-
-    int result = select(socket_fd + 1, &read_fds, NULL, &error_fds, timeout);
-
-    /* We might normally use FD_ISSET here, but this isn't necessary
-     * because we're only listening for one item (the socket). */
-
-    if (result < 0) {
-        return result;
-    }
-
-    if (result == 0) {
-        return -1;
-    }
-
-    return 0;
 }
 
 int socks_server_poll(int socket_fd)
