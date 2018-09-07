@@ -35,16 +35,19 @@ LINT_CFLAGS := $(strip \
 )
 
 lint-%.h: %.h
+	@echo Checking $*.h against lots of compiler warnings...
 	@$(CC) -c $(LINT_CFLAGS) -Wno-unused-macros $< -o /dev/null
 
 lint-%.c: %.c
-	@echo Checking $* against lots of compiler warnings...
+	@echo Checking $*.c against lots of compiler warnings...
 	@$(CC) -c $(LINT_CFLAGS) $< -o /dev/null
 
-$(foreach x,$(wildcard *.c),$(eval lint-$x:))
-$(foreach x,$(wildcard *.h),$(eval lint-$x:))
-lint: $(foreach x,$(wildcard *.c),lint-$x)
-lint: $(foreach x,$(wildcard *.h),lint-$x)
+LINT_TARGETS := $(foreach x,$(wildcard *.c),lint-$x)
+LINT_TARGETS += $(foreach x,$(wildcard *.h),lint-$x)
+LINT_TARGETS := $(sort $(LINT_TARGETS))
+$(foreach x,$(LINT_TARGETS),$(eval lint-$x:))
+
+lint: $(foreach x,$(LINT_TARGETS),$x)
 
 clean::
 	rm -f *.plist
@@ -123,6 +126,7 @@ SAN_CFLAGS := \
 #------------------------------------------------------------------------------#
 
 cppcheck-%:
+	@echo cppchecking $*...
 	@(cppcheck $* --force --enable=warning,style,performance,portability \
 	-I `pwd` -I /usr/include -I /usr/include/linux \
 	-I /usr/lib/gcc/x86_64-redhat-linux/7/include \

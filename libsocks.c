@@ -246,13 +246,13 @@ static int socks_server_select(int socket_fd, struct timeval *restrict timeout)
 
 /*----------------------------------------------------------------------------*/
 
-ssize_t socks_server_respond(int fd, const void *buf, uint32_t nbyte)
+ssize_t socks_server_respond(int response_fd, const void *buf, uint32_t nbyte)
 {
-    if (fd_socket_setflag(fd) != 0) {
+    if (fd_socket_setflag(response_fd) != 0) {
         fprintf(stderr, "setflag failed!\n");
     }
 
-    return socks_send(fd, buf, nbyte);
+    return socks_send(response_fd, buf, nbyte);
 }
 
 int socks_server_open(const char *filename)
@@ -295,7 +295,7 @@ int socks_server_process(int socket_fd, socks_callback_t callback)
     char header[4];
     uint32_t msgsize;
 
-    connection_fd = accept(socket_fd, 0, 0);
+    connection_fd = accept(socket_fd, NULL, NULL);
 
     if (connection_fd < 0) {
         return connection_fd;

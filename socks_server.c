@@ -1,3 +1,5 @@
+#define _POSIX_C_SOURCE 200809L
+
 #include <errno.h>
 #include <libgen.h>
 #include <stdint.h>
@@ -93,7 +95,8 @@ int main(int argc, char **argv)
 
         if (result != 0) {
             if (errno != 0) {
-                fprintf(stderr, "socks_server_process: failed (%s)\n", strerror(errno));
+                fprintf(stderr, "socks_server_process: failed (%s)\n",
+                        strerror(errno));
                 return result;
             }
             fprintf(stderr, "warn: command failed with code %d\n", result);
