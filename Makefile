@@ -86,7 +86,7 @@ tidy-%: %
 	    "-checks=*$(TIDY_BLACKLIST_STRING)" \
 	    "-header-filter=.*" $* -- 2>/dev/null | \
 	    (grep -iP "(warning|error)[:]" -A2 --color || true)
-	@clang-check -analyze $* -- && rm $(basename $*).plist
+	@clang-check -analyze $* -- && rm -f $(basename $*).plist
 
 $(foreach x,$(wildcard *.c),$(eval tidy-$x:))
 $(foreach x,$(wildcard *.h),$(eval tidy-$x:))
