@@ -127,7 +127,8 @@ SAN_CFLAGS := \
 
 cppcheck-%:
 	@echo cppchecking $*...
-	@(cppcheck $* --force --enable=warning,style,performance,portability \
+	@(cppcheck $* --std=c99 --force \
+	--enable=warning,style,performance,portability \
 	-I `pwd` -I /usr/include -I /usr/include/linux \
 	-I /usr/lib/gcc/x86_64-redhat-linux/7/include \
 	--std=c99 1>/dev/null) 2>&1 | (grep -vP "^[(]information" 1>&2 || true)
