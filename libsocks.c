@@ -1,8 +1,8 @@
 #define _POSIX_C_SOURCE 200809L
 
 #include <errno.h>
-#include <limits.h>
 #include <fcntl.h>
+#include <limits.h>
 #include <stdio.h>
 #include <string.h>
 #include <sys/socket.h>
@@ -11,8 +11,6 @@
 #include <unistd.h>
 
 #include "libsocks.h"
-
-static const char path_toolong[] = "%s: error: pathname too long\n";
 
 /*----------------------------------------------------------------------------*/
 
@@ -132,7 +130,11 @@ static int socks_address_make(const char *filename, struct sockaddr_un *result)
     size_t length = strnlen(filename, PATH_MAX + 1);
 
     if (length > address_maxlen) {
-        fprintf(stderr, path_toolong, progname);
+        char buffer[address_maxlen + 1];
+        memcpy(buffer, filename, address_maxlen);
+        buffer[address_maxlen] = '\x00';
+
+        fprintf(stderr, "error: pathname too long [%s]\n", buffer);
         return -1;
     }
 

@@ -8,8 +8,6 @@
 
 enum {socks_packet_max = 4096};
 
-extern const char *progname;
-
 /*----------------------------------------------------------------------------*/
 
 /** @brief Sends a packet of data to a libsocks server and receives the
