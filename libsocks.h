@@ -6,10 +6,6 @@
 
 /*----------------------------------------------------------------------------*/
 
-enum {socks_packet_max = 4096};
-
-/*----------------------------------------------------------------------------*/
-
 /** @brief Sends a packet of data to a libsocks server and receives the
  * server's response. Returns the number of bytes received into output.
  * @param[in] filename Filename of target socketfile.
