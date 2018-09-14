@@ -1,0 +1,5 @@
+*.a
+*.o
+lint_flags.mk
+client
+server
