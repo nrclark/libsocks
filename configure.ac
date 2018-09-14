@@ -16,7 +16,7 @@ AC_CONFIG_HEADERS([config.h])
 #------------------------- Init Automake / Autoconf  --------------------------#
 
 AC_PREREQ([2.69])
-AM_INIT_AUTOMAKE([foreign subdir-objects])
+AM_INIT_AUTOMAKE([foreign subdir-objects serial-tests])
 AC_USE_SYSTEM_EXTENSIONS
 
 #------------------------ Confirm Rand() Requirements  ------------------------#
