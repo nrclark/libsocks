@@ -1,15 +1,21 @@
 #!/bin/bash
+source taplib.sh
 
-echo 1..7
-#
-# Create a new Board and Tile, then place
-# the Tile onto the board.
-#
-echo ok 1 - The object isa Board
-echo ok 2 - Board size is zero
-echo "#NARP"
-echo ok 3 - The object isa Tile
-echo not ok 4 - Caterpillars fly \# TODO metamorphosis in progress
-echo 'ok 5 - Get possible places to put the Tile #skip'
-echo ok 6 - Placing the tile produces no error
-echo ok 7 - Board size is 1
+assert_ok "Testing assert OK" << END
+    true
+END
+
+assert_fail "Testing assert failure" << END
+    false
+END
+
+assert_ok "Testing output log" << END
+    echo "Log data"
+    echo "is awesoem"
+    echo "Log data" >&2
+    echo "is awesoem" >&2
+END
+
+assert_skip "Testing skip" << END
+    false
+END
