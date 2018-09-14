@@ -10,13 +10,14 @@ AC_SUBST([LIB_RELEASE],[SEMANTIC_VERSION])
 
 AC_CONFIG_MACRO_DIR([m4])
 AC_CONFIG_AUX_DIR([build-aux])
+AC_REQUIRE_AUX_FILE([tap-driver.sh])
 AC_CONFIG_SRCDIR([libsocks.h])
 AC_CONFIG_HEADERS([config.h])
 
 #------------------------- Init Automake / Autoconf  --------------------------#
 
 AC_PREREQ([2.69])
-AM_INIT_AUTOMAKE([foreign subdir-objects serial-tests])
+AM_INIT_AUTOMAKE([foreign subdir-objects])
 AC_USE_SYSTEM_EXTENSIONS
 
 #------------------------ Confirm Rand() Requirements  ------------------------#

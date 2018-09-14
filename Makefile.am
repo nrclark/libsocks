@@ -21,8 +21,10 @@ test_server_CFLAGS = -I@srcdir@ -I@srcdir@/test/nunit
 test_server_SOURCES = test/socks_server.c
 test_server_LDADD = libsocks.la libnunit.la
 
-TESTS = test/test-basic.sh
-TESTS_ENVIRONMENT = PATH=@srcdir@/test:$(PATH)
+TEST_LOG_DRIVER = env AM_TAP_AWK='$(AWK)' $(SHELL) $(top_srcdir)/build-aux/tap-driver.sh
+TEST_LOG_DRIVER_FLAGS = --comments
 
-#EXTRA_DIST = test/chpst.check test/chpst.dist test/runit.check test/runit.dist
-#CLEANFILES = $(TESTS) runit.stdout runit-init.stdout runsv.stdout
+TESTS_ENVIRONMENT = PATH=@srcdir@/test:$(PATH)
+TESTS = test/sample.test test/test-basic.sh
+
+EXTRA_DIST = $(TESTS)
