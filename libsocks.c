@@ -275,6 +275,10 @@ int socks_server_open(const char *filename)
         return socket_fd;
     }
 
+    if (access(filename, F_OK) == 0) {
+        unlink(filename);
+    }
+
     result = bind(socket_fd, (struct sockaddr *) &address, sizeof(address));
 
     if (result != 0) {
