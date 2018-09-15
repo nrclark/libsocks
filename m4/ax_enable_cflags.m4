@@ -34,3 +34,17 @@ AC_DEFUN([AX_ENABLE_CFLAGS],
   done
   ]
 )
+
+# $1 is a set of warnings to blacklist. Every other warning the compiler
+# knows how to emit will be enabled.
+AC_DEFUN([AX_ENABLE_EVERY_WARNING],
+  [
+  _FLAG_SET="`BLACKLIST="$1" ./guess_flags.sh`"
+
+  AS_VAR_APPEND([CFLAGS],[" -Wall -Wextra -pedantic"])
+  for flag in $_FLAG_SET; do
+      AS_VAR_APPEND([CFLAGS],[" $flag"])
+  done
+  AS_VAR_APPEND([CFLAGS],[" -Wno-system-headers"])
+  ]
+)

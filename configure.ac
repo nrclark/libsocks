@@ -49,8 +49,31 @@ AC_CHECK_FUNCS([select socket])
 
 AX_CREATE_ENABLE_HELP_SECTION([Features to enable])
 AX_MAKE_ENABLE_OPT([sanitizers], [no], [Build with GCC sanitizers enabled])
+AX_MAKE_ENABLE_OPT([lint], [no], [Build with every warning GCC can emit])
+AX_MAKE_ENABLE_OPT([warnings], [yes], [Build with -Wall -Wextra -pedantic])
+AX_MAKE_ENABLE_OPT([werror], [yes], [Build with -Werror])
 
 #---------------------- Configure For Optional Sanitizers  --------------------#
+
+AS_IF([test "x$enable_lint" = xno], [], [
+  AX_ENABLE_CFLAGS([-std=c99])
+  AX_ENABLE_EVERY_WARNING([
+    -Wtraditional -Wformat-nonliteral
+    -Wtraditional-conversion -Wpadded -Wunused-macros -Wabi
+  ])
+])
+
+AS_IF([test "x$enable_warnings" = xno], [], [
+  AX_ENABLE_CFLAGS([
+    -Wall
+    -Wextra
+    -pedantic
+  ])
+])
+
+AS_IF([test "x$enable_warnings" = xno], [], [
+  AS_VAR_APPEND([CFLAGS],[" -Werror"])
+])
 
 AS_IF([test "x$enable_sanitizers" = xno], [], [
   AX_ENABLE_CFLAGS([
