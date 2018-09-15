@@ -8,88 +8,55 @@
 
 #include "eintr_wrappers.h"
 
+#define wrap_call(dtype, x) \
+    do { \
+        dtype result; \
+        do { \
+            result = x; \
+        } while ((result == -1) && (errno == EINTR)); \
+        return result; \
+    } while (0)
+
 int accept_noeintr(int socket, struct sockaddr *restrict address,
                    socklen_t *restrict address_len)
 {
-    int result;
-
-    do {
-        result = accept_noeintr(socket, address, address_len);
-    } while ((result == -1) && (errno == EINTR));
-    return result;
+    wrap_call(int, accept(socket, address, address_len));
 }
 
 int close_noeintr(int fildes)
 {
-    int result;
-
-    do {
-        result = close(fildes);
-    } while ((result == -1) && (errno == EINTR));
-    return result;
+    wrap_call(int, close(fildes));
 }
 
 int connect_noeintr(int socket, const struct sockaddr *address,
                     socklen_t address_len)
 {
-    int result;
-
-    do {
-        result = connect(socket, address, address_len);
-    } while ((result == -1) && (errno == EINTR));
-    return result;
+    wrap_call(int, connect(socket, address, address_len));
 }
 
 int fcntl_setown_noeintr(int fildes, pid_t owner)
 {
-    int result;
-
-    do {
-        result = fcntl(fildes, F_SETOWN, owner);
-    } while ((result == -1) && (errno == EINTR));
-
-    return result;
+    wrap_call(int, fcntl(fildes, F_SETOWN, owner));
 }
 
 pid_t fcntl_getown_noeintr(int fildes)
 {
-    pid_t result;
-
-    do {
-        result = fcntl(fildes, F_GETOWN, 0);
-    } while ((result == -1) && (errno == EINTR));
-
-    return result;
+    wrap_call(pid_t, fcntl(fildes, F_GETOWN, 0));
 }
 
 ssize_t read_noeintr(int fildes, void *buf, size_t nbyte)
 {
-    int result;
-
-    do {
-        result = read(fildes, buf, nbyte);
-    } while ((result == -1) && (errno == EINTR));
-    return result;
+    wrap_call(ssize_t, read(fildes, buf, nbyte));
 }
 
 int select_noeintr(int nfds, fd_set *restrict readfds,
                    fd_set *restrict writefds, fd_set *restrict errorfds,
                    struct timeval *restrict timeout)
 {
-    int result;
-
-    do {
-        result = select(nfds, readfds, writefds, errorfds, timeout);
-    } while ((result == -1) && (errno == EINTR));
-    return result;
+    wrap_call(int, select(nfds, readfds, writefds, errorfds, timeout));
 }
 
 ssize_t write_noeintr(int fildes, const void *buf, size_t nbyte)
 {
-    int result;
-
-    do {
-        result = write(fildes, buf, nbyte);
-    } while ((result == -1) && (errno == EINTR));
-    return result;
+    wrap_call(ssize_t, write(fildes, buf, nbyte));
 }
