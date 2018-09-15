@@ -71,13 +71,10 @@ AS_IF([test "x$enable_warnings" = xno], [], [
   ])
 ])
 
-AS_IF([test "x$enable_warnings" = xno], [], [
-  AS_VAR_APPEND([CFLAGS],[" -Werror"])
-])
-
 AS_IF([test "x$enable_sanitizers" = xno], [], [
   AX_ENABLE_CFLAGS([
-    -O0 -g
+    -O0
+    -g
     -fstack-protector-strong
     -fstack-protector-all
     -fsanitize=shift
@@ -98,6 +95,10 @@ AS_IF([test "x$enable_sanitizers" = xno], [], [
     -fsanitize=returns-nonnull-attribute
     -fsanitize=signed-integer-overflow
   ])
+])
+
+AS_IF([test "x$enable_werror" = xno], [], [
+  AS_VAR_APPEND([CFLAGS],[" -Werror"])
 ])
 
 #------------------------------ Generate Outputs ------------------------------#
