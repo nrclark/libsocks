@@ -10,6 +10,7 @@
 #include <sys/un.h>
 #include <unistd.h>
 
+#include "eintr_wrappers.h"
 #include "libsocks.h"
 
 /*----------------------------------------------------------------------------*/
@@ -55,7 +56,7 @@ static ssize_t read_count(int filedes, char *buf, size_t nbyte)
     size_t total = 0;
 
     while (total < nbyte) {
-        ssize_t result = read(filedes, buf, (nbyte - total));
+        ssize_t result = read_noeintr(filedes, buf, (nbyte - total));
 
         if (result < 0) {
             return result;
@@ -80,7 +81,7 @@ static ssize_t write_count(int filedes, const char *buf, size_t nbyte)
     size_t remaining = nbyte;
 
     while (remaining != 0) {
-        ssize_t result = write(filedes, buf, remaining);
+        ssize_t result = write_noeintr(filedes, buf, remaining);
 
         if (result < 0) {
             return result;
@@ -95,17 +96,17 @@ static ssize_t write_count(int filedes, const char *buf, size_t nbyte)
 
 static int fd_socket_setflag(int fd)
 {
-    return fcntl(fd, F_SETOWN, getpid());
+    return fcntl_setown_noeintr(fd, getpid());
 }
 
 static int fd_socket_clearflag(int fd)
 {
-    return fcntl(fd, F_SETOWN, 0);
+    return fcntl_setown_noeintr(fd, 0);
 }
 
 static int fd_socket_checkflag(int fd)
 {
-    pid_t result = fcntl(fd, F_GETOWN, 0);
+    pid_t result = fcntl_getown_noeintr(fd);
 
     if (errno == 0) {
         return (result != 0);
@@ -234,7 +235,8 @@ static int socks_server_select(int socket_fd, struct timeval *restrict timeout)
     FD_SET(socket_fd, &read_fds);
     FD_SET(socket_fd, &error_fds);
 
-    int result = select(socket_fd + 1, &read_fds, NULL, &error_fds, timeout);
+    int result = select_noeintr(socket_fd + 1, &read_fds, NULL, &error_fds,
+                                timeout);
 
     /* We might normally use FD_ISSET here, but this isn't necessary
      * because we're only listening for one item (the socket). */
@@ -301,7 +303,7 @@ int socks_server_process(int socket_fd, socks_callback_t callback)
     char header[4];
     uint32_t msgsize;
 
-    connection_fd = accept(socket_fd, NULL, NULL);
+    connection_fd = accept_noeintr(socket_fd, NULL, NULL);
 
     if (connection_fd < 0) {
         return connection_fd;
@@ -315,7 +317,7 @@ int socks_server_process(int socket_fd, socks_callback_t callback)
 
     msgsize = deserialize_uint32(header);
     result = socks_process_request(connection_fd, callback, msgsize);
-    close(connection_fd);
+    close_noeintr(connection_fd);
 
     return result;
 }
@@ -349,7 +351,7 @@ int socks_server_wait(int socket_fd)
 
 int socks_server_close(int socket_fd)
 {
-    return close(socket_fd);
+    return close_noeintr(socket_fd);
 }
 
 /*----------------------------------------------------------------------------*/
@@ -374,22 +376,23 @@ ssize_t socks_client_process(const char *filename, const char *input,
         return socket_fd;
     }
 
-    result = connect(socket_fd, (struct sockaddr *) &address, sizeof(address));
+    result = connect_noeintr(socket_fd, (struct sockaddr *) &address,
+                             sizeof(address));
 
     if (result != 0) {
         fprintf(stderr, "Couldn't connect to socket [%s]\n", filename);
-        close(socket_fd);
+        close_noeintr(socket_fd);
         return result;
     }
 
     result = socks_send(socket_fd, input, nbyte);
 
     if (result < 0) {
-        close(socket_fd);
+        close_noeintr(socket_fd);
         return result;
     }
 
     result = socks_recv(socket_fd, output, maxlen);
-    close(socket_fd);
+    close_noeintr(socket_fd);
     return result;
 }
