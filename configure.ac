@@ -45,6 +45,38 @@ AC_TYPE_UINT32_T
 AC_FUNC_STRNLEN
 AC_CHECK_FUNCS([select socket])
 
+#--------------------- Create Custom Configuration Options --------------------#
+
+AX_CREATE_ENABLE_HELP_SECTION([Features to enable])
+AX_MAKE_ENABLE_OPT([sanitizers], [no], [Build with GCC sanitizers enabled])
+
+#---------------------- Configure For Optional Sanitizers  --------------------#
+
+AS_IF([test "x$enable_sanitizers" = xno], [], [
+  AX_ENABLE_CFLAGS([
+    -O0 -g
+    -fstack-protector-strong
+    -fstack-protector-all
+    -fsanitize=shift
+    -fsanitize=undefined
+    -fsanitize=address
+    -fsanitize=alignment
+    -fsanitize=bool
+    -fsanitize=bounds
+    -fsanitize=bounds-strict
+    -fsanitize=enum
+    -fsanitize=float-cast-overflow
+    -fsanitize=float-divide-by-zero
+    -fsanitize=integer-divide-by-zero
+    -fsanitize=null
+    -fsanitize=object-size
+    -fno-sanitize-recover=all
+    -fsanitize=return
+    -fsanitize=returns-nonnull-attribute
+    -fsanitize=signed-integer-overflow
+  ])
+])
+
 #------------------------------ Generate Outputs ------------------------------#
 
 AC_CONFIG_FILES([Makefile])
