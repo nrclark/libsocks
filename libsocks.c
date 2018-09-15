@@ -15,32 +15,28 @@
 
 /*----------------------------------------------------------------------------*/
 
-/** @brief Serializes a uint32_t into a little-endian 4-char array. Used to
+/** @brief Serializes a uint16_t into a little-endian 2-char array. Used to
  * ensure predictable serialization across platforms.
  * @param[in] input Value to serialize
  * @param[out] output Destination for serialized data */
-static void serialize_uint32(uint32_t input, char output[4])
+static void serialize_uint16(uint16_t input, char output[2])
 {
-    output[0] = (input >> 0) & 0xFF;
-    output[1] = (input >> 8) & 0xFF;
-    output[2] = (input >> 16) & 0xFF;
-    output[3] = (input >> 24) & 0xFF;
+    output[0] = (char)((input >> 0) & 0xFF);
+    output[1] = (char)((input >> 8) & 0xFF);
 }
 
-/** @brief Deserializes a little-endian 4-char array and returns the result.
+/** @brief Deserializes a little-endian 2-char array and returns the result.
  * Used to ensure predictable deserialization across platforms.
  * @param[in] input Serialized data
- * @return Deserialized uint32 */
-static uint32_t deserialize_uint32(const char input[4])
+ * @return Deserialized uint16 */
+static uint16_t deserialize_uint16(const char input[2])
 {
-    uint32_t result = 0;
+    int result = 0;
 
-    result += (uint32_t)(input[0]) << 0;
-    result += (uint32_t)(input[1]) << 8;
-    result += (uint32_t)(input[2]) << 16;
-    result += (uint32_t)(input[3]) << 24;
+    result += (input[0]) << 0;
+    result += (input[1]) << 8;
 
-    return result;
+    return (uint16_t) (result & 0xFFFF);
 }
 
 /** @brief Reads a specified number of bytes from a file-descriptor. Retries
@@ -148,7 +144,7 @@ static int socks_address_make(const char *filename, struct sockaddr_un *result)
 static ssize_t socks_recv(int fd, void *buf, size_t bufsize)
 {
     char header[4];
-    uint32_t msgsize;
+    uint16_t msgsize;
     ssize_t result;
 
     result = read_count(fd, header, 4);
@@ -157,40 +153,40 @@ static ssize_t socks_recv(int fd, void *buf, size_t bufsize)
         return result;
     }
 
-    msgsize = deserialize_uint32(header);
+    msgsize = deserialize_uint16(header);
 
     if (msgsize > bufsize) {
         errno = EMSGSIZE;
         return -1;
     }
 
-    return read_count(fd, buf, msgsize);
+    return read_count(fd, (char *) buf, msgsize);
 }
 
-static ssize_t socks_send(int fd, const void *buf, uint32_t nbyte)
+static ssize_t socks_send(int fd, const void *buf, uint16_t nbyte)
 {
     char header[4];
     ssize_t result;
 
-    serialize_uint32(nbyte, header);
+    serialize_uint16(nbyte, header);
     result = write_count(fd, header, 4);
 
     if (result < 0) {
         return result;
     }
 
-    return write_count(fd, buf, nbyte);
+    return write_count(fd, (const char *) buf, nbyte);
 }
 
 static int socks_process_request(int connection_fd, socks_callback_t callback,
-                                 uint32_t input_size)
+                                 uint16_t input_size)
 {
     int result;
     char buffer[input_size + 1];
     int callback_result;
 
     buffer[input_size] = '\x00';
-    result = read_count(connection_fd, buffer, input_size);
+    result = (int) read_count(connection_fd, buffer, input_size);
 
     if (result < 0) {
         return result;
@@ -207,7 +203,7 @@ static int socks_process_request(int connection_fd, socks_callback_t callback,
 
     switch (fd_socket_checkflag(connection_fd)) {
         case 0:
-            result = socks_server_respond(connection_fd, "", 0);
+            result = (int) socks_server_respond(connection_fd, "", 0);
             break;
 
         case 1:
@@ -250,7 +246,7 @@ static int socks_server_select(int socket_fd, struct timeval *restrict timeout)
 
 /*----------------------------------------------------------------------------*/
 
-ssize_t socks_server_respond(int response_fd, const void *buf, uint32_t nbyte)
+ssize_t socks_server_respond(int response_fd, const void *buf, uint16_t nbyte)
 {
     if (fd_socket_setflag(response_fd) != 0) {
         fprintf(stderr, "setflag failed!\n");
@@ -301,7 +297,7 @@ int socks_server_process(int socket_fd, socks_callback_t callback)
     int connection_fd;
     ssize_t result;
     char header[4];
-    uint32_t msgsize;
+    uint16_t msgsize;
 
     connection_fd = accept_noeintr(socket_fd, NULL, NULL);
 
@@ -315,11 +311,11 @@ int socks_server_process(int socket_fd, socks_callback_t callback)
         return (int) result;
     }
 
-    msgsize = deserialize_uint32(header);
+    msgsize = deserialize_uint16(header);
     result = socks_process_request(connection_fd, callback, msgsize);
     close_noeintr(connection_fd);
 
-    return result;
+    return (int) result;
 }
 
 int socks_server_poll(int socket_fd)
@@ -357,7 +353,7 @@ int socks_server_close(int socket_fd)
 /*----------------------------------------------------------------------------*/
 
 ssize_t socks_client_process(const char *filename, const char *input,
-                             uint32_t nbyte, char *output, uint32_t maxlen)
+                             uint16_t nbyte, char *output, uint16_t maxlen)
 {
     ssize_t result;
     int socket_fd;

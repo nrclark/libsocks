@@ -18,7 +18,7 @@
  * @retval <0 A communications error occured, and errno was set accordingly.
  * @retval >=0 Length of response from server. */
 ssize_t socks_client_process(const char *filename, const char *input,
-                             uint32_t nbyte, char *output, uint32_t maxlen);
+                             uint16_t nbyte, char *output, uint16_t maxlen);
 
 /*----------------------------------------------------------------------------*/
 
@@ -65,14 +65,14 @@ int socks_server_poll(int socket_fd);
  * the event of an error.
  * @retval <0 Error writing data, and errno was set accordingly.
  * @retval >=0 Number of bytes written. */
-ssize_t socks_server_respond(int response_fd, const void *buf, uint32_t nbyte);
+ssize_t socks_server_respond(int response_fd, const void *buf, uint16_t nbyte);
 
 /** @brief Function-type for the user-provided callback function. A function
  * of this type is given to socks_server_process(), which will call it
  * automatically when appropriate. The 'msg' pointer holds the incoming message
  * (of length 'len'). Your callback should use the socks_server_respond()
  * function to send the response (if any). */
-typedef int (*socks_callback_t)(int response_fd, const char *msg, uint32_t len);
+typedef int (*socks_callback_t)(int response_fd, const char *msg, uint16_t len);
 
 /** @brief Processing function for a libsocks server. Should be called only
  * when a client is connected and waiting, as determined by socks_server_wait()
