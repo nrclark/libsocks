@@ -104,7 +104,7 @@ static int fd_socket_checkflag(int fd)
 {
     pid_t result = fcntl_getown_noeintr(fd);
 
-    if (errno == 0) {
+    if (result != -1) {
         return (result != 0);
     }
 
@@ -186,6 +186,8 @@ static int socks_process_request(int connection_fd, socks_callback_t callback,
     int callback_result;
 
     buffer[input_size] = '\x00';
+
+    errno = 0;
     result = (int) read_count(connection_fd, buffer, input_size);
 
     if (result < 0) {
