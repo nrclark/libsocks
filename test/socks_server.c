@@ -27,7 +27,7 @@ static int sleep_ms(unsigned int count)
     return nanosleep(&duration, NULL);
 }
 
-static int callback(int response_fd, const char *input, uint32_t nbyte)
+static int callback(int response_fd, const char *input, uint16_t nbyte)
 {
     printf("responding to command: [%s]\n", input);
 

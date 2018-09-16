@@ -15,7 +15,7 @@ int main(int argc, char **argv)
     ssize_t result;
     char buffer[1024];
     char *cmd;
-    uint32_t cmd_len;
+    uint16_t cmd_len;
 
     progname = basename(argv[0]);
 
