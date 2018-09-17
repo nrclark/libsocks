@@ -187,7 +187,6 @@ static int socks_process_request(int connection_fd, socks_callback_t callback,
 
     buffer[input_size] = '\x00';
 
-    errno = 0;
     result = (int) read_count(connection_fd, buffer, input_size);
 
     if (result < 0) {
@@ -277,6 +276,8 @@ int socks_server_open(const char *filename)
 
     if (access(filename, F_OK) == 0) {
         unlink(filename);
+    } else if (errno == ENOENT) {
+        errno = 0;
     }
 
     result = bind(socket_fd, (struct sockaddr *) &address, sizeof(address));
