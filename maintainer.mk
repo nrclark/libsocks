@@ -11,10 +11,10 @@ lint_flags.mk:
 	grep -P "(disabled|[=] )" | grep -Po "[-]W[^ \t=]+" | \
 	sort | uniq > $@.temp.init
 	echo "int main(void) { return 0;}" > $@.temp.c
-	$(CC) $$(cat $@.temp.init) $@.temp.c 2>&1 | grep "error: " | \
+	$(CC) $$(cat $@.temp.init) $@.temp.c -o /dev/null 2>&1 | grep "error: " | \
 	grep -oP "[-]W[a-zA-Z0-9_-]+" | sort | uniq > $@.temp.blacklist
 	cat $@.temp.init | grep -vFf $@.temp.blacklist > $@.temp.works
-	$(CC) $$(cat $@.temp.works) $@.temp.c 2>&1 | \
+	$(CC) $$(cat $@.temp.works) $@.temp.c -o /dev/null 2>&1 | \
 	    grep -P "is valid for [^ ]+ but not for C" | \
 	    grep -oP "[-]W[a-zA-Z0-9_-]+" > $@.temp.blacklist
 	cat $@.temp.works | grep -vFf $@.temp.blacklist > $@.temp.ok
