@@ -27,14 +27,16 @@
 #define NULL 0
 #endif
 
-#define __label_test() do { fprintf(stderr,"  - %s\n",__func__); } while (0)
-#define __test(x, msg, condition) do { \
-    int _result = (x); \
-    if (!(_result condition)) { \
-        fprintf(stderr,"Test '%s' FAILED [%s:%d]: %s (%d %s)\n",__func__,\
-                __FILE__,__LINE__, msg, _result, xstr(condition)); \
-        return -1; \
-    } \
-} while(0)
+#define __label_test() do {fprintf(stderr, "  - %s\n", __func__);} while (0)
+#define __test(x, msg, condition) \
+    do { \
+        int _result = (x); \
+        if (!(_result condition)) { \
+            fprintf(stderr, "Test '%s' FAILED [%s:%d]: %s (%d %s)\n", \
+                    __func__, __FILE__, __LINE__, msg, _result, \
+                    xstr(condition)); \
+            return -1; \
+        } \
+    } while (0)
 
 #endif

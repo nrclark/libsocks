@@ -27,18 +27,20 @@ int check_mem_const(void *ptr, unsigned char value, unsigned int length);
 void hexdump(const void *ptr, unsigned int len);
 void hexdump_flat(const void *ptr, unsigned int len);
 
-void register_suite(test_t *suite, char *name, setup_t setup,
+void register_suite(test_t *suite, const char *name, setup_t setup,
                     teardown_t teardown);
 
 #define label_test() __label_test()
 
-#define assert_true(x) __test(x, "\n    ["xstr(x)"] not true", == 1)
-#define assert_false(x) __test(x, "\n    ["xstr(x)"] not false", == 0)
+#define assert_true(x) __test(x, "\n    ["xstr (x)"] not true", == 1)
+#define assert_false(x) __test(x, "\n    ["xstr (x)"] not false", == 0)
 
-#define assert_success(x) __test(x, "\n    ["xstr(x)"] failed", == 0)
-#define assert_failure(x) __test(x, "\n    ["xstr(x)"] succeeded", != 0)
+#define assert_success(x) __test(x, "\n    ["xstr (x)"] failed", == 0)
+#define assert_failure(x) __test(x, "\n    ["xstr (x)"] succeeded", != 0)
 
-#define assert_nonnegative(x) __test((x), "\n    ["xstr(x)"] is negative", >= 0)
-#define assert_negative(x) __test((x), "\n    ["xstr(x)"] is positive", < 0)
-#define assert_nonzero(x) __test((x), "\n    ["xstr(x)"] is zero", != 0)
+#define assert_nonnegative(x) \
+    __test((x), "\n    ["xstr (x)"] is negative", >= 0)
+
+#define assert_negative(x) __test((x), "\n    ["xstr (x)"] is positive", < 0)
+#define assert_nonzero(x) __test((x), "\n    ["xstr (x)"] is zero", != 0)
 #endif

@@ -7,6 +7,7 @@
 *.log
 *.o
 *.trs
+a.out
 Makefile
 Makefile.in
 aclocal.m4

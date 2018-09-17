@@ -12,6 +12,7 @@
 
 const char *progname;
 static volatile char shutdown = 0;
+static volatile char blocking = 1;
 
 static int sleep_ms(unsigned int count)
 {
@@ -29,14 +30,17 @@ static int sleep_ms(unsigned int count)
 
 static int callback(int response_fd, const char *input, uint16_t nbyte)
 {
+    ssize_t result;
     printf("responding to command: [%s]\n", input);
 
     if (strcmp(input, "ping") == 0) {
-        return socks_server_respond(response_fd, "pong", sizeof("pong"));
+        result = socks_server_respond(response_fd, "pong", sizeof("pong"));
+        return (int)((result < 0) ? result : 0);
     }
 
     if (strcmp(input, "pong") == 0) {
-        return socks_server_respond(response_fd, "pango", sizeof("pango"));
+        result = socks_server_respond(response_fd, "pango", sizeof("pango"));
+        return (int)((result < 0) ? result : 0);
     }
 
     if (strcmp(input, "empty") == 0) {
@@ -52,12 +56,24 @@ static int callback(int response_fd, const char *input, uint16_t nbyte)
         return 0;
     }
 
+    if (strcmp(input, "set_nonblocking") == 0) {
+        blocking = 0;
+        result = socks_server_respond(response_fd, "ok", sizeof("ok"));
+        return (int)((result < 0) ? result : 0);
+    }
+
+    if (strcmp(input, "set_blocking") == 0) {
+        blocking = 1;
+        result = socks_server_respond(response_fd, "ok", sizeof("ok"));
+        return (int)((result < 0) ? result : 0);
+    }
+
     if (strcmp(input, "shutdown") == 0) {
         shutdown = 1;
         return 0;
     }
 
-    return socks_server_respond(response_fd, input, nbyte);
+    return (int) socks_server_respond(response_fd, input, nbyte);
 }
 
 int main(int argc, char **argv)
@@ -84,11 +100,28 @@ int main(int argc, char **argv)
             break;
         }
 
-        result = socks_server_wait(socks_fd);
+        if (blocking) {
+            result = socks_server_wait(socks_fd);
 
-        if (result != 0) {
-            fprintf(stderr, "socks_erver_wait: failed (%s)\n", strerror(errno));
-            return result;
+            if (result != 0) {
+                fprintf(stderr, "socks_server_wait: failed (%s)\n",
+                        strerror(errno));
+                return result;
+            }
+        } else {
+            while (1) {
+                result = socks_server_poll(socks_fd);
+                if (result < 0) {
+                    fprintf(stderr, "socks_server_wait: failed (%s)\n",
+                            strerror(errno));
+                    return result;
+                }
+
+                if (result) {
+                    break;
+                }
+                sleep_ms(2);
+            }
         }
 
         result = socks_server_process(socks_fd, callback);

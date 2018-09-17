@@ -25,13 +25,13 @@ int main(int argc, char **argv)
     }
 
     cmd = argv[2];
-    cmd_len = strnlen(cmd, 1024);
+    cmd_len = (uint16_t) strnlen(cmd, 1024);
 
     result = socks_client_process(argv[1], cmd, cmd_len, buffer, 1024);
 
     if (result < 0) {
         perror(NULL);
-        return result;
+        return (int) result;
     }
 
     buffer[result] = '\x00';

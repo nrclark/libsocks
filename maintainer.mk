@@ -2,6 +2,7 @@
 CC := gcc
 
 default: libsocks.a
+MAKE_DIR := $(abspath $(dir $(firstword $(MAKEFILE_LIST))))
 
 #------------------------------------------------------------------------------#
 
@@ -54,10 +55,10 @@ clean::
 
 #------------------------------------------------------------------------------#
 
-format-%: % uncrustify.cfg
+format-%: % $(MAKE_DIR)/uncrustify.cfg
 	@echo Formatting $*...
 	@cp -a $* $*.temp.c
-	@uncrustify -c uncrustify.cfg --no-backup $*.temp.c -lc -q
+	@uncrustify -c $(MAKE_DIR)/uncrustify.cfg --no-backup $*.temp.c -lc -q
 	@sed -i 's/^    "/"/g' $*.temp.c
 	@if ! diff -q $*.temp.c $* 1>/dev/null; then cp $*.temp.c $*; fi
 	@rm $*.temp.c
