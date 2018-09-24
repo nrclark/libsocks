@@ -46,7 +46,7 @@ lint-%.c: %.c
 LINT_TARGETS := $(foreach x,$(wildcard *.c),lint-$x)
 LINT_TARGETS += $(foreach x,$(wildcard *.h),lint-$x)
 LINT_TARGETS := $(sort $(LINT_TARGETS))
-$(foreach x,$(LINT_TARGETS),$(eval lint-$x:))
+$(foreach x,$(LINT_TARGETS),$(eval $x:))
 
 lint: $(foreach x,$(LINT_TARGETS),$x)
 
