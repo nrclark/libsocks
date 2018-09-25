@@ -60,11 +60,11 @@ static int mkdir_if_needed(const char *path, mode_t mode)
         return -1;
     }
 
-    return 0;
+    return result;
 }
 
-static int load_block(const char *restrict path, unsigned int offset,
-                      unsigned int maxlen, char *restrict target)
+static unsigned int load_block(const char *restrict path, unsigned int offset,
+                               unsigned int maxlen, char *restrict target)
 {
     unsigned int count = 0;
     path += offset;
