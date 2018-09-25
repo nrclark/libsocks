@@ -120,6 +120,86 @@ static int load_block(const char *restrict path, unsigned int offset,
     return count;
 }
 
+/** @brief Returns 1 if the input path is a valid directory, and 0 otherwise.
+ * Follows symlinks. */
+static inline int is_directory(const char *path)
+{
+    struct stat stat_buffer;
+    int result;
+    result = stat(path, &stat_buffer);
+
+    if (result != 0) {
+        return 0;
+    }
+
+    return (S_ISDIR(stat_buffer.st_mode) != 0);
+}
+
+/** @brief Finds the length of the longest existing directory-only path in
+ * 'path'. Respects symlinks. Returns the length of the path segment. */
+static unsigned int find_existing(char *path, unsigned int maxlen)
+{
+    unsigned int position = 0;
+    unsigned int x = 0;
+    unsigned int length = strnlen(path, maxlen);
+    int result;
+    
+    while (1) {
+        if (path[x] == '\x00') {
+            if (x != 0) {
+                if (is_directory(path)) {
+                    position = x;
+                }
+            }
+            break;
+        }
+
+        if (x == length) {
+            break;
+        }
+
+        if ((path[x] == '/') && (x != 0)) {
+            path[x] = '\x00';
+            result = is_directory(path);
+            path[x] = '/';
+
+            if (result == 0) {
+                break;
+            }
+
+            position = x;
+        }
+    x++;
+    }
+
+    if (position == length) {
+        return length;
+    }
+
+    return position + 1;
+}
+
+/** @brief Takes an input path and splits it into 'existing' and 'remainder'
+ * chunks. Terminates the input path at the last valid location, and returns
+ * the rest of the string as a result. */
+static char * split_existing(char *path, unsigned int maxlen)
+{
+    unsigned int length = strnlen(path, maxlen);
+    unsigned int index;
+
+    if (length == 0) {
+        return path;
+    }
+
+    index = find_existing(path, length);
+
+    if (index != 0) {
+        path[index-1] = '\x00';
+    }
+
+    return path + index;
+}
+
 int mkdirs(const char *path, unsigned int length, mode_t mode)
 {
     int cwd_fd;
