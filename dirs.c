@@ -250,15 +250,15 @@ int mkdirs_chdir(const char *path, unsigned int length, mode_t mode, uid_t uid,
     return 0;
 }
 
-int mkdirs(const char *path, unsigned int length, mode_t mode, uid_t uid,
-           gid_t gid)
-{
-    DIR *dirp;
-    int cwd_fd;
-    int result;
+static DIR *dirp = NULL;
+static int cwd_fd = -1;
 
-    int mkdirs_errno;
-    int mkdirs_result;
+int store_cwd(void)
+{
+    if ((dirp != NULL) || (cwd_fd != -1)) {
+        fprintf(stderr, "cwd buffer is already full\n");
+        return -1;
+    }
 
     dirp = opendir(".");
 
@@ -275,22 +275,58 @@ int mkdirs(const char *path, unsigned int length, mode_t mode, uid_t uid,
         return -1;
     }
 
-    mkdirs_result = mkdirs_chdir(path, length, mode, uid, gid);
-    mkdirs_errno = errno;
+    return 0;
+}
 
-    if (mkdirs_result != 0) {
-        fprintf(stderr, "%s\n", strerror(errno));
+int return_cwd(void)
+{
+    int result;
+
+    if ((dirp == NULL) || (cwd_fd == -1)) {
+        fprintf(stderr, "cwd buffer is empty\n");
+        return -1;
     }
 
     result = fchdir(cwd_fd);
 
     if (result < 0) {
         fprintf(stderr, "%s\n", strerror(errno));
+        return result;
     }
 
+    cwd_fd = -1;
+
     result = closedir(dirp);
+    dirp = NULL;
 
     if (result < 0) {
+        fprintf(stderr, "%s\n", strerror(errno));
+        return result;
+    }
+
+    return 0;
+}
+
+int mkdirs(const char *path, unsigned int length, mode_t mode, uid_t uid,
+           gid_t gid)
+{
+    int result;
+    int mkdirs_errno;
+    int mkdirs_result;
+
+    result = store_cwd();
+
+    if (result != 0) {
+        fprintf(stderr, "%s\n", strerror(errno));
+        return result;
+    }
+
+    mkdirs_result = mkdirs_chdir(path, length, mode, uid, gid);
+    mkdirs_errno = errno;
+
+    result = return_cwd();
+
+    if (result != 0) {
         fprintf(stderr, "%s\n", strerror(errno));
     }
 
