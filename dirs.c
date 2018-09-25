@@ -26,8 +26,9 @@ static ino_t inode_at(int fd, const char *restrict path)
     return buffer.st_ino;
 }
 
-static int mkdir_if_needed(const char *path, mode_t mode)
+static int mkdir_if_needed(const char *path, mode_t mode, uid_t uid, gid_t gid)
 {
+    int prev_errno = 0;
     int result = -1;
     ino_t parent_inode = (ino_t)(-1);
     ino_t expected_inode = (ino_t)(-1);
@@ -50,6 +51,16 @@ static int mkdir_if_needed(const char *path, mode_t mode)
 
     if ((result != 0) && (errno != EEXIST)) {
         return result;
+    }
+
+    if (result == 0) {
+        result = chown(path, uid, gid);
+        if (result != 0) {
+            prev_errno = errno;
+            rmdir(path);
+            errno = prev_errno;
+            return result;
+        }
     }
 
     result = chdir(path);
@@ -188,7 +199,7 @@ static void split_existing(char *path, unsigned int maxlen, char **exist,
     }
 }
 
-int mkdirs(char *path, unsigned int length, mode_t mode)
+int mkdirs(char *path, unsigned int length, mode_t mode, uid_t uid, gid_t gid)
 {
     int cwd_fd;
     int result;
@@ -251,7 +262,7 @@ int mkdirs(char *path, unsigned int length, mode_t mode)
             }
 
             offset += used;
-            result = mkdir_if_needed(block, mode);
+            result = mkdir_if_needed(block, mode, uid, gid);
             if (result != 0) {
                 fprintf(stderr, "%s\n", strerror(errno));
                 result = fchdir(cwd_fd);
@@ -286,7 +297,7 @@ int main(int argc, char **argv)
         unsigned int length = strnlen(argv[x], PATH_MAX);
         argv[x][length] = '\x00';
 
-        result = mkdirs(argv[x], length, 0700);
+        result = mkdirs(argv[x], length, 0700, (uid_t)(-1), (gid_t)(-1));
         printf("@ result = %d\n", result);
     }
 
