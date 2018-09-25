@@ -28,7 +28,6 @@ static ino_t inode_at(int fd, const char *restrict path)
 
 static int mkdir_if_needed(const char *path, mode_t mode, uid_t uid, gid_t gid)
 {
-    int prev_errno = 0;
     int result = -1;
     ino_t parent_inode = (ino_t)(-1);
     ino_t expected_inode = (ino_t)(-1);
@@ -56,7 +55,7 @@ static int mkdir_if_needed(const char *path, mode_t mode, uid_t uid, gid_t gid)
     if (result == 0) {
         result = chown(path, uid, gid);
         if (result != 0) {
-            prev_errno = errno;
+            int prev_errno = errno;
             rmdir(path);
             errno = prev_errno;
             return result;
@@ -199,25 +198,67 @@ static void split_existing(char *path, unsigned int maxlen, char **exist,
     }
 }
 
-int mkdirs(char *path, unsigned int length, mode_t mode, uid_t uid, gid_t gid)
+/** @brief Creates a series of directories (if needed). Sets mode, uid, and
+ * gid on any newly-created directories (use -1 for the uid/gid if no chown
+ * is needed). Switches into the final directory when done. */
+int mkdirs_chdir(const char *path, unsigned int length, mode_t mode, uid_t uid,
+                 gid_t gid)
 {
-    int cwd_fd;
     int result;
-    DIR *dirp = NULL;
-    char buffer[2 * length + 4];
+    char buffer[3 * length + 3];
 
-    char *block = buffer;
-    char *existing = &buffer[0];
-    char *remainder = &buffer[length + 2];
-
-    unsigned int used = 0;
-    unsigned int offset = 0;
+    char *path_copy = &buffer[0];
+    char *existing = &buffer[length + 1];
+    char *remainder = &buffer[2 * length + 2];
+    char *block = path_copy;
 
     // First, the path is split into existing and non-existing components.
+    safe_strncpy(path_copy, path, length);
+    split_existing(path_copy, length, &existing, &remainder);
 
-    split_existing(path, length, &existing, &remainder);
+    // Next, we chdir into the existing portion of the path.
 
-    // Next, we store the file-descriptor for the current directory.
+    result = chdir(existing);
+
+    if (result != 0) {
+        fprintf(stderr, "%s\n", strerror(errno));
+        return -1;
+    }
+
+    // Next, we create all segments of the remainder. This is done using
+    // mkdir_if_needed, which validates the parent inode of each directory
+    // as it gets created. This prevents symlink-based attacks.
+
+    if (remainder[0] != '\x00') {
+        unsigned int offset = 0;
+
+        while (1) {
+            unsigned int used = load_block(remainder, offset, length, block);
+            if (used == 0) {
+                break;
+            }
+
+            offset += used;
+            result = mkdir_if_needed(block, mode, uid, gid);
+            if (result != 0) {
+                fprintf(stderr, "%s\n", strerror(errno));
+                return -1;
+            }
+        }
+    }
+
+    return 0;
+}
+
+int mkdirs(const char *path, unsigned int length, mode_t mode, uid_t uid,
+           gid_t gid)
+{
+    DIR *dirp;
+    int cwd_fd;
+    int result;
+
+    int mkdirs_errno;
+    int mkdirs_result;
 
     dirp = opendir(".");
 
@@ -234,49 +275,12 @@ int mkdirs(char *path, unsigned int length, mode_t mode, uid_t uid, gid_t gid)
         return -1;
     }
 
-    // Next, we chdir into the existing portion of the path.
+    mkdirs_result = mkdirs_chdir(path, length, mode, uid, gid);
+    mkdirs_errno = errno;
 
-    result = chdir(existing);
-
-    if (result != 0) {
+    if (mkdirs_result != 0) {
         fprintf(stderr, "%s\n", strerror(errno));
-        result = fchdir(cwd_fd);
-
-        if (result < 0) {
-            fprintf(stderr, "%s\n", strerror(errno));
-        }
-        closedir(dirp);
-        return -1;
     }
-
-    // Next, we create all segments of the remainder. This is done using
-    // mkdir_if_needed, which validates the parent inode of each directory
-    // as it gets created. This prevents symlink-based attacks.
-    if (remainder[0] != '\x00') {
-        fprintf(stderr, "begin loop (%s)\n", remainder);
-
-        while (1) {
-            used = load_block(remainder, offset, length, block);
-            if (used == 0) {
-                break;
-            }
-
-            offset += used;
-            result = mkdir_if_needed(block, mode, uid, gid);
-            if (result != 0) {
-                fprintf(stderr, "%s\n", strerror(errno));
-                result = fchdir(cwd_fd);
-
-                if (result < 0) {
-                    fprintf(stderr, "%s\n", strerror(errno));
-                }
-                closedir(dirp);
-                return -1;
-            }
-        }
-    }
-
-    // Finally, we switch back to the original working directory.
 
     result = fchdir(cwd_fd);
 
@@ -284,8 +288,14 @@ int mkdirs(char *path, unsigned int length, mode_t mode, uid_t uid, gid_t gid)
         fprintf(stderr, "%s\n", strerror(errno));
     }
 
-    closedir(dirp);
-    return result;
+    result = closedir(dirp);
+
+    if (result < 0) {
+        fprintf(stderr, "%s\n", strerror(errno));
+    }
+
+    errno = mkdirs_errno;
+    return mkdirs_result;
 }
 
 int main(int argc, char **argv)
