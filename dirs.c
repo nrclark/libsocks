@@ -134,7 +134,6 @@ static unsigned int find_existing(char *path, unsigned int maxlen)
         if ((path[x] == '/') && (x != 0)) {
             path[x] = '\x00';
             result = is_directory(path);
-            printf("check path: [%s] is %d\n", path, result);
             path[x] = '/';
 
             if (result == 0) {
@@ -169,8 +168,6 @@ static void split_existing(char *path, unsigned int maxlen, char **exist,
     }
 
     index = find_existing(path, length);
-
-    printf("length: %d, index: %d\n", length, index);
 
     if (index == 0) {
         if (path[0] == '/') {
