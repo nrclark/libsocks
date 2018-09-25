@@ -11,19 +11,18 @@
 #include <limits.h>
 #include <stdlib.h>
 
-__attribute__((unused)) static char cwd_buffer[4096];
-__attribute__((unused)) static char * cwd()
+__attribute__ ((unused)) static char cwd_buffer[4096];
+__attribute__ ((unused)) static char * cwd(void)
 {
     return getcwd(cwd_buffer, sizeof(cwd_buffer));
 }
 
-__attribute__((unused))
-static int show_chdir(const char *path)
+__attribute__ ((unused)) static int show_chdir(const char *path)
 {
     int result = chdir(path);
 
     if (result != 0) {
-        fprintf(stderr, "Couldn't show_chdir to [%s] (%s)\n", path,
+        fprintf(stderr, "Couldn't chdir to [%s] (%s)\n", path,
                 strerror(errno));
         return result;
     }
@@ -32,8 +31,7 @@ static int show_chdir(const char *path)
     return 0;
 }
 
-__attribute__((unused))
-static int show_fchdir(int fd)
+__attribute__ ((unused)) static int show_fchdir(int fd)
 {
     int result = fchdir(fd);
 
@@ -46,8 +44,7 @@ static int show_fchdir(int fd)
     return 0;
 }
 
-__attribute__((unused))
-static int show_mkdir(const char *path, mode_t mode)
+__attribute__ ((unused)) static int show_mkdir(const char *path, mode_t mode)
 {
     int result = mkdir(path, mode);
 
