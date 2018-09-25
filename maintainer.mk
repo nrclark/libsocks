@@ -198,3 +198,9 @@ server: socks_server.o libsocks.a
 
 client: socks_client.o libsocks.a
 	$(CC) $(CFLAGS) $^ -o $@
+
+d2: d2.o
+	$(CC) $(CFLAGS) $^ -o $@
+
+%: %.o
+	$(CC) $(CFLAGS) $^ -o $@

@@ -11,40 +11,9 @@
 #include <limits.h>
 #include <stdlib.h>
 
-static char cwd_buffer[4096];
-static char * cwd()
-{
-    return getcwd(cwd_buffer, sizeof(cwd_buffer));
-}
+#include "debug.h"
 
-static int show_chdir(const char *path)
-{
-    int result = chdir(path);
-
-    if (result != 0) {
-        fprintf(stderr, "Couldn't show_chdir to [%s] (%s)\n", path,
-                strerror(errno));
-        return result;
-    }
-
-    fprintf(stdout, "Changed dir to [%s]\n", cwd());
-    return 0;
-}
-
-static int show_fchdir(int fd)
-{
-    int result = fchdir(fd);
-
-    if (result != 0) {
-        fprintf(stderr, "Couldn't fchdir to [%d] (%s)\n", fd, strerror(errno));
-        return result;
-    }
-
-    fprintf(stdout, "Changed dir to [%s]\n", cwd());
-    return 0;
-}
-
-ino_t inode_at(int fd, const char *restrict path)
+static ino_t inode_at(int fd, const char *restrict path)
 {
     struct stat buffer;
     int result;
@@ -68,7 +37,7 @@ static int mkdir_if_needed(const char *path, mode_t mode)
     }
 
     if (strcmp(path, "..") == 0) {
-        return show_chdir("..");
+        return chdir("..");
     }
 
     expected_inode = inode_at(AT_FDCWD, ".");
@@ -83,7 +52,7 @@ static int mkdir_if_needed(const char *path, mode_t mode)
         return result;
     }
 
-    result = show_chdir(path);
+    result = chdir(path);
     parent_inode = inode_at(AT_FDCWD, "..");
 
     if (expected_inode != parent_inode) {
@@ -100,6 +69,7 @@ static int load_block(const char *restrict path, unsigned int offset,
     unsigned int count = 0;
     path += offset;
     maxlen -= offset;
+    char path_valid = 0;
 
     while (*path == '/') {
         count++;
@@ -108,13 +78,16 @@ static int load_block(const char *restrict path, unsigned int offset,
     }
 
     while ((*path != '/') && (*path != '\x00') && (maxlen != 0)) {
+        path_valid = 1;
         *(target++) = *(path++);
         count++;
         maxlen--;
     }
 
-    if (count != 0) {
-        *(target) = '\x00';
+    *(target) = '\x00';
+
+    if (path_valid == 0) {
+        return 0;
     }
 
     return count;
@@ -143,7 +116,7 @@ static unsigned int find_existing(char *path, unsigned int maxlen)
     unsigned int x = 0;
     unsigned int length = strnlen(path, maxlen);
     int result;
-    
+
     while (1) {
         if (path[x] == '\x00') {
             if (x != 0) {
@@ -161,6 +134,7 @@ static unsigned int find_existing(char *path, unsigned int maxlen)
         if ((path[x] == '/') && (x != 0)) {
             path[x] = '\x00';
             result = is_directory(path);
+            printf("check path: [%s] is %d\n", path, result);
             path[x] = '/';
 
             if (result == 0) {
@@ -169,52 +143,74 @@ static unsigned int find_existing(char *path, unsigned int maxlen)
 
             position = x;
         }
-    x++;
+        x++;
     }
 
-    if (position == length) {
-        return length;
-    }
-
-    return position + 1;
+    return position;
 }
 
-/** @brief Takes an input path and splits it into 'existing' and 'remainder'
- * chunks. Terminates the input path at the last valid location, and returns
- * the rest of the string as a result. */
-static char * split_existing(char *path, unsigned int maxlen)
+static void safe_strncpy(char *dest, const char *src, size_t maxlen)
+{
+    size_t length = strnlen(src, maxlen);
+
+    memcpy(dest, src, length);
+    dest[length] = '\x00';
+}
+
+static void split_existing(char *path, unsigned int maxlen, char **exist,
+                           char **remainder)
 {
     unsigned int length = strnlen(path, maxlen);
     unsigned int index;
 
     if (length == 0) {
-        return path;
+        **exist = '\x00';
+        **remainder = '\x00';
     }
 
     index = find_existing(path, length);
 
-    if (index != 0) {
-        path[index-1] = '\x00';
+    printf("length: %d, index: %d\n", length, index);
+
+    if (index == 0) {
+        if (path[0] == '/') {
+            safe_strncpy(*exist, "/", 2);
+            safe_strncpy(*remainder, path + 1, length - 1);
+        } else {
+            safe_strncpy(*exist, ".", 2);
+            safe_strncpy(*remainder, path, length);
+        }
+        return;
     }
 
-    return path + index;
+    safe_strncpy(*exist, path, index);
+    if (index != length) {
+        safe_strncpy(*remainder, path + index + 1, length - index - 1);
+    } else {
+        **remainder = '\x00';
+    }
 }
 
-int mkdirs(const char *path, unsigned int length, mode_t mode)
+int mkdirs(char *path, unsigned int length, mode_t mode)
 {
     int cwd_fd;
     int result;
     DIR *dirp = NULL;
-    char buffer[length + 1];
+    char buffer[2 * length + 4];
+
+    char *block = buffer;
+    char *existing = &buffer[0];
+    char *remainder = &buffer[length + 2];
 
     unsigned int used = 0;
     unsigned int offset = 0;
 
-    for (unsigned int x = 0; x < (length + 1); x++) {
-        buffer[x] = 0;
-    }
+    // First, the path is split into existing and non-existing components.
 
-    buffer[length] = '\x00';
+    split_existing(path, length, &existing, &remainder);
+
+    // Next, we store the file-descriptor for the current directory.
+
     dirp = opendir(".");
 
     if (dirp == NULL) {
@@ -230,32 +226,41 @@ int mkdirs(const char *path, unsigned int length, mode_t mode)
         return -1;
     }
 
-    if (path[0] == '/') {
-        result = show_chdir("/");
+    // Next, we chdir into the existing portion of the path.
 
-        if (result != 0) {
-            fprintf(stderr, "%s\n", strerror(errno));
-            closedir(dirp);
-            return -1;
+    result = chdir(existing);
+
+    if (result != 0) {
+        fprintf(stderr, "%s\n", strerror(errno));
+        closedir(dirp);
+        return -1;
+    }
+
+    // Next, we create all segments of the remainder. This is done using
+    // mkdir_if_needed, which validates the parent inode of each directory
+    // as it gets created. This prevents symlink-based attacks.
+    if (remainder[0] != '\x00') {
+        fprintf(stderr, "begin loop (%s)\n", remainder);
+
+        while (1) {
+            used = load_block(remainder, offset, length, block);
+            if (used == 0) {
+                break;
+            }
+
+            offset += used;
+            result = mkdir_if_needed(block, mode);
+            if (result != 0) {
+                fprintf(stderr, "%s\n", strerror(errno));
+                closedir(dirp);
+                return -1;
+            }
         }
     }
 
-    while (1) {
-        used = load_block(path, offset, length, buffer);
-        if (used == 0) {
-            break;
-        }
+    // Finally, we switch back to the original working directory.
 
-        offset += used;
-        result = mkdir_if_needed(buffer, mode);
-        if (result != 0) {
-            fprintf(stderr, "%s\n", strerror(errno));
-            closedir(dirp);
-            return -1;
-        }
-    }
-
-    result = show_fchdir(cwd_fd);
+    result = fchdir(cwd_fd);
 
     if (result < 0) {
         fprintf(stderr, "%s\n", strerror(errno));
