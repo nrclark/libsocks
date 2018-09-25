@@ -229,6 +229,11 @@ int mkdirs(char *path, unsigned int length, mode_t mode)
 
     if (result != 0) {
         fprintf(stderr, "%s\n", strerror(errno));
+        result = fchdir(cwd_fd);
+
+        if (result < 0) {
+            fprintf(stderr, "%s\n", strerror(errno));
+        }
         closedir(dirp);
         return -1;
     }
@@ -249,6 +254,11 @@ int mkdirs(char *path, unsigned int length, mode_t mode)
             result = mkdir_if_needed(block, mode);
             if (result != 0) {
                 fprintf(stderr, "%s\n", strerror(errno));
+                result = fchdir(cwd_fd);
+
+                if (result < 0) {
+                    fprintf(stderr, "%s\n", strerror(errno));
+                }
                 closedir(dirp);
                 return -1;
             }
