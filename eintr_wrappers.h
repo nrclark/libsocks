@@ -1,6 +1,7 @@
 #ifndef _EINTR_WRAPPER_H_
 #define _EINTR_WRAPPER_H_
 
+#include <dirent.h>
 #include <sys/select.h>
 #include <sys/socket.h>
 #include <sys/types.h>
@@ -24,5 +25,11 @@ int select_noeintr(int nfds, fd_set *restrict readfds,
                    struct timeval *restrict timeout);
 
 ssize_t write_noeintr(int fildes, const void *buf, size_t nbyte);
+
+int chown_noeintr(const char *path, uid_t owner, gid_t group);
+
+int closedir_noeintr(DIR *dirp);
+
+int fchdir_noeintr(int fildes);
 
 #endif

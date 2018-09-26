@@ -9,6 +9,8 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
+#include "eintr_wrappers.h"
+
 __attribute__ ((unused)) static char cwd_buffer[4096];
 __attribute__ ((unused)) static char * cwd(void)
 {
@@ -31,7 +33,7 @@ __attribute__ ((unused)) static int show_chdir(const char *path)
 
 __attribute__ ((unused)) static int show_fchdir(int fd)
 {
-    int result = fchdir(fd);
+    int result = fchdir_noeintr(fd);
 
     if (result != 0) {
         fprintf(stderr, "Couldn't fchdir to [%d] (%s)\n", fd, strerror(errno));

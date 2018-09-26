@@ -1,5 +1,6 @@
 #define _POSIX_C_SOURCE 200809L
 
+#include <dirent.h>
 #include <errno.h>
 #include <fcntl.h>
 #include <sys/select.h>
@@ -59,4 +60,19 @@ int select_noeintr(int nfds, fd_set *restrict readfds,
 ssize_t write_noeintr(int fildes, const void *buf, size_t nbyte)
 {
     wrap_call(ssize_t, write(fildes, buf, nbyte));
+}
+
+int chown_noeintr(const char *path, uid_t owner, gid_t group)
+{
+    wrap_call(int, chown(path, owner, group));
+}
+
+int closedir_noeintr(DIR *dirp)
+{
+    wrap_call(int, closedir(dirp));
+}
+
+int fchdir_noeintr(int fildes)
+{
+    wrap_call(int, fchdir(fildes));
 }

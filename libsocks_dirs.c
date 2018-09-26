@@ -11,6 +11,7 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
+#include "eintr_wrappers.h"
 #include "libsocks_dirs.h"
 
 #ifdef VERBOSE_DEBUG
@@ -66,7 +67,7 @@ static int mkdir_if_needed(const char *path, mode_t mode, uid_t uid, gid_t gid)
     }
 
     if (result == 0) {
-        result = chown(path, uid, gid);
+        result = chown_noeintr(path, uid, gid);
         if (result != 0) {
             int prev_errno = errno;
             rmdir(path);
@@ -231,7 +232,7 @@ int socks_store_cwd(void)
 
     if (cwd_fd < 0) {
         fprintf(stderr, "%s\n", strerror(errno));
-        closedir(dirp);
+        closedir_noeintr(dirp);
         return -1;
     }
 
@@ -247,7 +248,7 @@ int socks_restore_cwd(void)
         return -1;
     }
 
-    result = fchdir(cwd_fd);
+    result = fchdir_noeintr(cwd_fd);
 
     if (result < 0) {
         fprintf(stderr, "%s\n", strerror(errno));
@@ -256,7 +257,7 @@ int socks_restore_cwd(void)
 
     cwd_fd = -1;
 
-    result = closedir(dirp);
+    result = closedir_noeintr(dirp);
     dirp = NULL;
 
     if (result < 0) {
