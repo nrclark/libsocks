@@ -187,6 +187,7 @@ libsocks.a: libsocks.o libsocks_dirs.o
 lint-libsocks: $(foreach x,$(LIBSOCKS_SRC),lint-$x)
 format-libsocks: $(foreach x,$(LIBSOCKS_SRC),format-$x)
 tidy-libsocks: $(foreach x,$(LIBSOCKS_SRC),tidy-$x)
+cppcheck-libsocks: $(foreach x,$(LIBSOCKS_SRC),cppcheck-$x)
 
 clean::
 	rm -f libsocks.a
