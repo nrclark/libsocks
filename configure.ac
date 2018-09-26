@@ -57,10 +57,7 @@ AX_MAKE_ENABLE_OPT([werror], [yes], [Build with -Werror])
 
 AS_IF([test "x$enable_lint" = xno], [], [
   AX_ENABLE_CFLAGS([-std=c99])
-  AX_ENABLE_EVERY_WARNING([
-    -Wtraditional -Wformat-nonliteral
-    -Wtraditional-conversion -Wpadded -Wunused-macros -Wabi
-  ])
+  AX_ENABLE_EVERY_WARNING([-Wtraditional -Wtraditional-conversion -Wabi])
 ])
 
 AS_IF([test "x$enable_warnings" = xno], [], [
