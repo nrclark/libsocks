@@ -133,11 +133,11 @@ static int is_directory(const char *path)
 
 /** @brief Finds the length of the longest existing directory-only path in
  * 'path'. Respects symlinks. Returns the length of the path segment. */
-static unsigned int find_existing(char *path, unsigned int maxlen)
+static unsigned int find_existing(char *path, size_t maxlen)
 {
     unsigned int position = 0;
     unsigned int x = 0;
-    unsigned int length = strnlen(path, maxlen);
+    size_t length = strnlen(path, maxlen);
     int result;
 
     while (1) {
@@ -182,7 +182,7 @@ static void safe_strncpy(char *dest, const char *src, size_t maxlen)
 static void split_existing(char *path, unsigned int maxlen, char **exist,
                            char **remainder)
 {
-    unsigned int length = strnlen(path, maxlen);
+    size_t length = strnlen(path, maxlen);
     unsigned int index;
 
     if (length == 0) {
