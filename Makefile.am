@@ -11,15 +11,22 @@ check_LTLIBRARIES = libnunit.la
 libnunit_la_SOURCES = test/nunit/nunit.h test/nunit/_nunit_pvt.h
 libnunit_la_SOURCES += test/nunit/nunit.c
 
-check_PROGRAMS = test/server test/client
+check_PROGRAMS = test/server test/client test/mkdirs
+
+test_mkdirs_CFLAGS = -I@srcdir@
+test_mkdirs_SOURCES = test/mkdirs.c
+test_mkdirs_LDADD = libsocks.la
+test_mkdirs_LDFLAGS = -static
 
 test_client_CFLAGS = -I@srcdir@ -I@srcdir@/test/nunit
 test_client_SOURCES = test/socks_client.c
 test_client_LDADD = libsocks.la libnunit.la
+test_client_LDFLAGS = -static
 
 test_server_CFLAGS = -I@srcdir@ -I@srcdir@/test/nunit
 test_server_SOURCES = test/socks_server.c
 test_server_LDADD = libsocks.la libnunit.la
+test_server_LDFLAGS = -static
 
 TEST_LOG_DRIVER = env AM_TAP_AWK='$(AWK)' $(SHELL) $(top_srcdir)/build-aux/tap-driver.sh
 TEST_LOG_DRIVER_FLAGS = --comments
