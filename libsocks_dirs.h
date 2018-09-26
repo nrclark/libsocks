@@ -2,8 +2,9 @@
 #define LIBSOCKS_DIRS_H
 
 #define _POSIX_C_SOURCE 200809L
-#include <unistd.h>
+
 #include <sys/stat.h>
+#include <unistd.h>
 
 /** @brief Creates a directory (if needed) along with any required parent
  * directories. Jumps into the target directory on completion.

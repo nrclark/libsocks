@@ -3,11 +3,11 @@
 
 #define _POSIX_C_SOURCE 200809L
 
-#include <stdio.h>
-#include <unistd.h>
-#include <sys/stat.h>
 #include <errno.h>
+#include <stdio.h>
 #include <string.h>
+#include <sys/stat.h>
+#include <unistd.h>
 
 __attribute__ ((unused)) static char cwd_buffer[4096];
 __attribute__ ((unused)) static char * cwd(void)
