@@ -21,7 +21,7 @@ $CC -Wall -Wextra -pedantic -Q --help=warning | \
 echo "int main(void) { return 0;}" > "$WORKDIR/lint_flags.mk.temp.c"
 
 $CC $(cat "$WORKDIR/lint_flags.mk.temp.init") \
-    "$WORKDIR/lint_flags.mk.temp.c" 2>&1 | \
+    "$WORKDIR/lint_flags.mk.temp.c" -o /dev/null 2>&1 | \
     grep "error: " | grep -oP "[-]W[a-zA-Z0-9_-]+" | \
     sort | uniq > "$WORKDIR/lint_flags.mk.temp.blacklist"
 
@@ -30,7 +30,7 @@ grep -vFf "$WORKDIR/lint_flags.mk.temp.blacklist" \
     > "$WORKDIR/lint_flags.mk.temp.works"
 
 $CC $(cat "$WORKDIR/lint_flags.mk.temp.works") \
-    "$WORKDIR/lint_flags.mk.temp.c" 2>&1 | \
+    "$WORKDIR/lint_flags.mk.temp.c" -o /dev/null 2>&1 | \
     grep -P "is valid for [^ ]+ but not for C" | \
     grep -oP "[-]W[a-zA-Z0-9_+-]+" > "$WORKDIR/lint_flags.mk.temp.blacklist"
 
