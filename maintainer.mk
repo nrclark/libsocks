@@ -176,11 +176,11 @@ clean::
 
 LIBSOCKS_SRC := $(filter libsocks%,$(wildcard *.c))
 LIBSOCKS_SRC += $(filter libsocks%,$(wildcard *.h))
-LIBSOCKS_SRC += _pvt_libsocks.h
 
 libsocks.o: libsocks.h
+libsocks_dirs.o: libsocks_dirs.h
 
-libsocks.a: libsocks.o
+libsocks.a: libsocks.o libsocks_dirs.o
 	rm -f $@
 	ar rcs $@ $^
 
@@ -199,8 +199,3 @@ server: socks_server.o libsocks.a
 client: socks_client.o libsocks.a
 	$(CC) $(CFLAGS) $^ -o $@
 
-d2: d2.o
-	$(CC) $(CFLAGS) $^ -o $@
-
-%: %.o
-	$(CC) $(CFLAGS) $^ -o $@

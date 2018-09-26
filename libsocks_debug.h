@@ -1,15 +1,13 @@
 #ifndef _DEBUG_H_
 #define _DEBUG_H_
 
+#define _POSIX_C_SOURCE 200809L
+
 #include <stdio.h>
 #include <unistd.h>
 #include <sys/stat.h>
-#include <fcntl.h>
 #include <errno.h>
-#include <dirent.h>
 #include <string.h>
-#include <limits.h>
-#include <stdlib.h>
 
 __attribute__ ((unused)) static char cwd_buffer[4096];
 __attribute__ ((unused)) static char * cwd(void)

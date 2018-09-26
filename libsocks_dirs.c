@@ -11,7 +11,20 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
-#include "debug.h"
+#include "libsocks_dirs.h"
+
+#ifdef VERBOSE_DEBUG
+/* Replace chdir/fchdir/mkdir calls with verbose equivalents. Intended for
+ * debug purposes. */
+#include "libsocks_debug.h"
+#endif
+
+/*----------------------------------------------------------------------------*/
+
+static DIR *dirp = NULL;
+static int cwd_fd = -1;
+
+/*----------------------------------------------------------------------------*/
 
 static ino_t inode_at(int fd, const char *restrict path)
 {
@@ -105,7 +118,7 @@ static unsigned int load_block(const char *restrict path, unsigned int offset,
 
 /** @brief Returns 1 if the input path is a valid directory, and 0 otherwise.
  * Follows symlinks. */
-static inline int is_directory(const char *path)
+static int is_directory(const char *path)
 {
     struct stat stat_buffer;
     int result;
@@ -198,11 +211,66 @@ static void split_existing(char *path, unsigned int maxlen, char **exist,
     }
 }
 
-/** @brief Creates a series of directories (if needed). Sets mode, uid, and
- * gid on any newly-created directories (use -1 for the uid/gid if no chown
- * is needed). Switches into the final directory when done. */
-int mkdirs_chdir(const char *path, unsigned int length, mode_t mode, uid_t uid,
-                 gid_t gid)
+/*----------------------------------------------------------------------------*/
+
+int socks_store_cwd(void)
+{
+    if ((dirp != NULL) || (cwd_fd != -1)) {
+        fprintf(stderr, "cwd buffer is already full\n");
+        return -1;
+    }
+
+    dirp = opendir(".");
+
+    if (dirp == NULL) {
+        fprintf(stderr, "%s\n", strerror(errno));
+        return -1;
+    }
+
+    cwd_fd = dirfd(dirp);
+
+    if (cwd_fd < 0) {
+        fprintf(stderr, "%s\n", strerror(errno));
+        closedir(dirp);
+        return -1;
+    }
+
+    return 0;
+}
+
+int socks_restore_cwd(void)
+{
+    int result;
+
+    if ((dirp == NULL) || (cwd_fd == -1)) {
+        fprintf(stderr, "cwd buffer is empty\n");
+        return -1;
+    }
+
+    result = fchdir(cwd_fd);
+
+    if (result < 0) {
+        fprintf(stderr, "%s\n", strerror(errno));
+        return result;
+    }
+
+    cwd_fd = -1;
+
+    result = closedir(dirp);
+    dirp = NULL;
+
+    if (result < 0) {
+        fprintf(stderr, "%s\n", strerror(errno));
+        return result;
+    }
+
+    return 0;
+}
+
+/*----------------------------------------------------------------------------*/
+
+int socks_mkdirs_chdir(const char *path, unsigned int length, mode_t mode,
+                       uid_t uid, gid_t gid)
 {
     int result;
     char buffer[3 * length + 3];
@@ -213,6 +281,7 @@ int mkdirs_chdir(const char *path, unsigned int length, mode_t mode, uid_t uid,
     char *block = path_copy;
 
     // First, the path is split into existing and non-existing components.
+
     safe_strncpy(path_copy, path, length);
     split_existing(path_copy, length, &existing, &remainder);
 
@@ -250,81 +319,24 @@ int mkdirs_chdir(const char *path, unsigned int length, mode_t mode, uid_t uid,
     return 0;
 }
 
-static DIR *dirp = NULL;
-static int cwd_fd = -1;
-
-int store_cwd(void)
-{
-    if ((dirp != NULL) || (cwd_fd != -1)) {
-        fprintf(stderr, "cwd buffer is already full\n");
-        return -1;
-    }
-
-    dirp = opendir(".");
-
-    if (dirp == NULL) {
-        fprintf(stderr, "%s\n", strerror(errno));
-        return -1;
-    }
-
-    cwd_fd = dirfd(dirp);
-
-    if (cwd_fd < 0) {
-        fprintf(stderr, "%s\n", strerror(errno));
-        closedir(dirp);
-        return -1;
-    }
-
-    return 0;
-}
-
-int return_cwd(void)
-{
-    int result;
-
-    if ((dirp == NULL) || (cwd_fd == -1)) {
-        fprintf(stderr, "cwd buffer is empty\n");
-        return -1;
-    }
-
-    result = fchdir(cwd_fd);
-
-    if (result < 0) {
-        fprintf(stderr, "%s\n", strerror(errno));
-        return result;
-    }
-
-    cwd_fd = -1;
-
-    result = closedir(dirp);
-    dirp = NULL;
-
-    if (result < 0) {
-        fprintf(stderr, "%s\n", strerror(errno));
-        return result;
-    }
-
-    return 0;
-}
-
-int mkdirs(const char *path, unsigned int length, mode_t mode, uid_t uid,
-           gid_t gid)
+int socks_mkdirs(const char *path, unsigned int length, mode_t mode, uid_t uid,
+                 gid_t gid)
 {
     int result;
     int mkdirs_errno;
     int mkdirs_result;
 
-    result = store_cwd();
+    result = socks_store_cwd();
 
     if (result != 0) {
         fprintf(stderr, "%s\n", strerror(errno));
         return result;
     }
 
-    mkdirs_result = mkdirs_chdir(path, length, mode, uid, gid);
+    mkdirs_result = socks_mkdirs_chdir(path, length, mode, uid, gid);
     mkdirs_errno = errno;
 
-    result = return_cwd();
+    result = socks_restore_cwd();
 
     if (result != 0) {
         fprintf(stderr, "%s\n", strerror(errno));
@@ -332,20 +344,4 @@ int mkdirs(const char *path, unsigned int length, mode_t mode, uid_t uid,
 
     errno = mkdirs_errno;
     return mkdirs_result;
-}
-
-int main(int argc, char **argv)
-{
-    int result = -1;
-    printf("---------------------\n");
-
-    for (int x = 1; x < argc; x++) {
-        unsigned int length = strnlen(argv[x], PATH_MAX);
-        argv[x][length] = '\x00';
-
-        result = mkdirs(argv[x], length, 0700, (uid_t)(-1), (gid_t)(-1));
-        printf("@ result = %d\n", result);
-    }
-
-    return result;
 }
