@@ -4,7 +4,7 @@ BIND_FLAGS := \
     --chown-deny --chgrp-deny --chmod-deny --xattr-ro \
     --delete-deny --rename-deny --realistic-permissions \
     --enable-ioctl \
-    -o allow_other \
+    --no-allow-other \
     -o dev
 
 RO_BINDS := bin etc proc sys usr lib lib64
@@ -37,4 +37,4 @@ cleanup:
 CHROOT_CMD ?= /bin/sh
 
 run-chroot:
-	fakeroot fakechroot $$(which chroot) $(CHROOT_DIR) $(CHROOT_CMD)
+	fakechroot fakeroot $$(which chroot) $(CHROOT_DIR) $(CHROOT_CMD)

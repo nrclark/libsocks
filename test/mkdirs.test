@@ -1,6 +1,8 @@
 #!/bin/bash
 source taplib.sh
 
+cd $(dirname "$0")
+
 CHROOT_DIR=chroot_dir
 WORKDIR=workdir
 
@@ -8,14 +10,18 @@ WORKDIR=workdir
 
 BIND_FLAGS="--chown-deny --chgrp-deny --chmod-deny --xattr-ro --delete-deny"
 BIND_FLAGS+=" --rename-deny --realistic-permissions --enable-ioctl"
-BIND_FLAGS+=" -o allow_other -o dev"
+BIND_FLAGS+=" --no-allow-other -o dev"
 
 RO_BINDS="bin etc proc sys usr lib lib64"
 RW_BINDS="tmp dev"
 ALL_BINDS="$RO_BINDS $RW_BINDS"
 
 run_chroot() {
-    fakeroot fakechroot $(which chroot) "${CHROOT_DIR}" $@
+    fakechroot fakeroot $(which chroot) ${CHROOT_DIR} /bin/sh -c "$@"
+}
+
+run_chroot_stdin() {
+    fakechroot fakeroot $(which chroot) ${CHROOT_DIR} /bin/sh </dev/stdin
 }
 
 unmount_path() {
@@ -63,20 +69,174 @@ cleanup_chroot() {
     sync
 }
 
-#trap cleanup_chroot INT TERM EXIT
+trap cleanup_chroot INT TERM EXIT
 
 #------------------------------------------------------------------------------#
 
-assert_ok "Testing basic chroot" << END
+assert_ok "Testing chroot functionality" << END
     set -e
     prep_chroot
     run_chroot ls -latrh 1>/dev/null
     cleanup_chroot
 END
 
-assert_ok "Testing basic mkdirs" << END
+assert_ok "Testing chroot functionality (from stdin)" << END
     set -e
     prep_chroot
-    run_chroot /bin/sh -c "cd /test && /workdir/mkdirs --help"
+    run_chroot_stdin << CHROOT_END
+        set -e
+        ls >/dev/null
+        true
+CHROOT_END
+    cleanup_chroot
+END
+
+assert_ok "Testing basic socks_mkdirs()" << END
+    set -e
+    prep_chroot
+    run_chroot_stdin << CHROOT_END
+        set -e
+        mkdir -p /test
+        cd /test
+        /workdir/mkdirs --help 1>/dev/null
+CHROOT_END
+    cleanup_chroot
+END
+
+assert_ok "Testing socks_mkdirs() UID" << END
+    set -e
+    prep_chroot
+    run_chroot_stdin << CHROOT_END
+        set -e
+        rm -rf /test
+        /workdir/mkdirs -g1123 /test/inner/final 1>/dev/null
+        for dir in /test /test/inner /test/inner/final; do
+            test \\\$(stat \\\$dir -c '%g') -eq 1123
+        done
+CHROOT_END
+    cleanup_chroot
+END
+
+assert_fail "Testing UID mismatch-detection (should fail)" << END
+    set -e
+    prep_chroot
+    run_chroot_stdin << CHROOT_END
+        set -e
+        rm -rf /test
+        /workdir/mkdirs -g1123 /test
+        test \\\$(stat /test -c '%g') -eq 127
+CHROOT_END
+    cleanup_chroot
+END
+
+assert_ok "Testing socks_mkdirs() GID" << END
+    set -e
+    prep_chroot
+    run_chroot_stdin << CHROOT_END
+        set -e
+        rm -rf /test
+        /workdir/mkdirs -g1123 /test/inner/final 1>/dev/null
+        for dir in /test /test/inner /test/inner/final; do
+            test \\\$(stat \\\$dir -c '%g') -eq 1123
+        done
+CHROOT_END
+    cleanup_chroot
+END
+
+assert_ok "Testing socks_mkdirs() mode-control" << END
+    set -e
+    prep_chroot
+    run_chroot_stdin << CHROOT_END
+        set -e
+        rm -rf /test
+        /workdir/mkdirs -m0700 /test/inner/final 1>/dev/null
+        /workdir/mkdirs -m0755 /test/inner/open 1>/dev/null
+        for dir in /test /test/inner /test/inner/final; do
+            test \\\$(stat \\\$dir -c '%a') -eq 700
+        done
+        test \\\$(stat /test/inner/open -c '%a') -eq 755
+CHROOT_END
+    cleanup_chroot
+END
+
+assert_ok "Testing socks_mkdirs() local-paths" << END
+    set -e
+    prep_chroot
+    run_chroot_stdin << CHROOT_END
+        set -e
+        rm -rf /test
+        mkdir test
+        cd test
+        /workdir/mkdirs inner/final 1>/dev/null
+
+        for dir in inner inner/final; do
+            test -d \\\$dir
+        done
+CHROOT_END
+    cleanup_chroot
+END
+
+assert_ok "Testing socks_mkdirs() relative-paths" << END
+    set -e
+    prep_chroot
+    run_chroot_stdin << CHROOT_END
+        set -e
+        rm -rf /test
+        rm -rf /hotdogs
+        mkdir test
+        cd test
+        /workdir/mkdirs ../hotdogs/apple 1>/dev/null
+        test -d /hotdogs
+        test -d /hotdogs/apple
+CHROOT_END
+    cleanup_chroot
+END
+
+assert_ok "Testing socks_mkdirs() crazy-paths" << END
+    set -e
+    prep_chroot
+    run_chroot_stdin << CHROOT_END
+        set -e
+        rm -rf /test
+        mkdir test
+        cd test
+        /workdir/mkdirs ///test/./../test/blimpo 1>/dev/null
+        test -d /test
+        test -d /test/blimpo
+CHROOT_END
+    cleanup_chroot
+END
+
+assert_ok "Testing socks_mkdirs() absolute symlinks" << END
+    set -e
+    prep_chroot
+    run_chroot_stdin << CHROOT_END
+        set -e
+        rm -rf /test /hopper
+        mkdir /test
+        mkdir /hopper
+        cd /test
+        ln -s /hopper junket
+        /workdir/mkdirs /test/junket/blimp/bango 1>/dev/null
+        test -d /hopper/blimp/bango
+        test -d /test/junket/blimp/bango
+CHROOT_END
+    cleanup_chroot
+END
+
+assert_ok "Testing socks_mkdirs() relative symlinks" << END
+    set -e
+    prep_chroot
+    run_chroot_stdin << CHROOT_END
+        set -e
+        rm -rf /test /hopper
+        mkdir /test
+        mkdir /hopper
+        cd /test
+        ln -s ../hopper junket
+        /workdir/mkdirs /test/junket/blimp/bango 1>/dev/null
+        test -d /hopper/blimp/bango
+        test -d /test/junket/blimp/bango
+CHROOT_END
     cleanup_chroot
 END
