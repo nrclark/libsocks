@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include "nunit.h"
 
-int basic_test() 
+static int basic_test(void)
 {
     assert_true(5 == 5);
     assert_false(5 == 4);

@@ -1,3 +1,5 @@
+#define _POSIX_C_SOURCE 200809L
+
 #include <limits.h>
 #include <stdio.h>
 #include <string.h>
@@ -6,15 +8,11 @@
 #include "nunit.h"
 #include "libsocks_dirs.h"
 
-char *getcwd(char *buf, size_t size);
-
 char first_buffer[PATH_MAX + 1] = {0};
 char second_buffer[PATH_MAX + 1] = {0};
 char third_buffer[PATH_MAX + 1] = {0};
 
-int socks_store_cwd(void);
-
-int directory_test()
+static int directory_test(void)
 {
     label_test();
 
