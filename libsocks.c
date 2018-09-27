@@ -256,7 +256,7 @@ ssize_t socks_server_respond(int response_fd, const void *buf, uint16_t nbyte)
     return socks_send(response_fd, buf, nbyte);
 }
 
-int socks_server_open(const char *filename)
+int socks_server_open(const char *filename, mode_t mode)
 {
     int result;
     int socket_fd;
@@ -281,6 +281,12 @@ int socks_server_open(const char *filename)
     }
 
     result = bind(socket_fd, (struct sockaddr *) &address, sizeof(address));
+
+    if (result != 0) {
+        return -1;
+    }
+
+    result = chmod_noeintr(filename, mode);
 
     if (result != 0) {
         return -1;

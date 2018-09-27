@@ -29,7 +29,7 @@ ssize_t socks_client_process(const char *filename, const char *input,
  * event of an error.
  * @retval <0 Socketfile couldn't be opened, and errno was set accordingly.
  * @retval >=0 File descriptor for the open socket. */
-int socks_server_open(const char *filename);
+int socks_server_open(const char *filename, mode_t mode);
 
 /** @brief Shuts down an active libsocks server.
  * @param[in] socket_fd File descriptor of open libsocks server.

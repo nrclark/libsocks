@@ -26,6 +26,8 @@ int select_noeintr(int nfds, fd_set *restrict readfds,
 
 ssize_t write_noeintr(int fildes, const void *buf, size_t nbyte);
 
+int chmod_noeintr(const char *path, mode_t mode);
+
 int chown_noeintr(const char *path, uid_t owner, gid_t group);
 
 int closedir_noeintr(DIR *dirp);
