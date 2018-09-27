@@ -207,6 +207,16 @@ static int suite_runner(test_t *suite, const char *name, setup_t setup,
     return EXIT_SUCCESS;
 }
 
+int default_setup(void)
+{
+    return EXIT_SUCCESS;
+}
+
+int default_teardown(void)
+{
+    return EXIT_SUCCESS;
+}
+
 int main(void)
 {
     nunit_config();

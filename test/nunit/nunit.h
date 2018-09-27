@@ -19,6 +19,9 @@ typedef int (*test_t)(void);
 typedef int (*setup_t)(void);
 typedef int (*teardown_t)(void);
 
+int default_setup(void);
+int default_teardown(void);
+
 extern void nunit_config(void);
 
 int check_zero(void *ptr, unsigned int length);
@@ -43,4 +46,5 @@ void register_suite(test_t *suite, const char *name, setup_t setup,
 
 #define assert_negative(x) __test((x), "\n    ["xstr (x)"] is positive", < 0)
 #define assert_nonzero(x) __test((x), "\n    ["xstr (x)"] is zero", != 0)
+#define assert_zero(x) __test((x), "\n    ["xstr (x)"] is non-zero", == 0)
 #endif
