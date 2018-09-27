@@ -24,4 +24,6 @@ stamp-h1
 test/client
 test/server
 test/mkdirs
+test/test_chdir
+test/test_nunit
 chroot_dir/
