@@ -1,4 +1,4 @@
-CHROOT_DIR := chroot
+CHROOT_DIR := chroot_dir
 
 BIND_FLAGS := \
     --chown-deny --chgrp-deny --chmod-deny --xattr-ro \

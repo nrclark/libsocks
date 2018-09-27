@@ -1,0 +1,82 @@
+#!/bin/bash
+source taplib.sh
+
+CHROOT_DIR=chroot_dir
+WORKDIR=workdir
+
+#------------------------------------------------------------------------------#
+
+BIND_FLAGS="--chown-deny --chgrp-deny --chmod-deny --xattr-ro --delete-deny"
+BIND_FLAGS+=" --rename-deny --realistic-permissions --enable-ioctl"
+BIND_FLAGS+=" -o allow_other -o dev"
+
+RO_BINDS="bin etc proc sys usr lib lib64"
+RW_BINDS="tmp dev"
+ALL_BINDS="$RO_BINDS $RW_BINDS"
+
+run_chroot() {
+    fakeroot fakechroot $(which chroot) "${CHROOT_DIR}" $@
+}
+
+unmount_path() {
+    local MOUNT="$1"
+    if stat --file-system --format=%T "$MOUNT" 2>/dev/null | grep -q fuse; then
+        fusermount -quz "$MOUNT"
+        sync
+        if [ -d "$MOUNT" ]; then
+            rmdir "$MOUNT"
+        fi
+    fi
+}
+
+mount_path() {
+    local SOURCE="$1"
+    local TARGET="$2"
+    local EXTRA_FLAGS="$3"
+
+    if [ ! -d "$TARGET" ]; then
+        mkdir -p "$TARGET"
+        bindfs ${BIND_FLAGS} $EXTRA_FLAGS "$SOURCE" "$TARGET"
+    fi
+}
+
+prep_chroot() {
+    for x in $RW_BINDS; do
+        mount_path "/$x" "${CHROOT_DIR}/$x"
+    done
+
+    for x in $RO_BINDS; do
+        mount_path "/$x" "${CHROOT_DIR}/$x" "-o ro"
+    done
+
+    mount_path "$(realpath .)" "${CHROOT_DIR}/$WORKDIR"
+}
+
+cleanup_chroot() {
+    for x in $ALL_BINDS; do
+        unmount_path "${CHROOT_DIR}/$x"
+    done
+
+    unmount_path "${CHROOT_DIR}/workdir"
+    find "${CHROOT_DIR}" -maxdepth 1 -type f | xargs -r rm
+    rm -rf "${CHROOT_DIR}/root"
+    sync
+}
+
+#trap cleanup_chroot INT TERM EXIT
+
+#------------------------------------------------------------------------------#
+
+assert_ok "Testing basic chroot" << END
+    set -e
+    prep_chroot
+    run_chroot ls -latrh 1>/dev/null
+    cleanup_chroot
+END
+
+assert_ok "Testing basic mkdirs" << END
+    set -e
+    prep_chroot
+    run_chroot /bin/sh -c "cd /test && /workdir/mkdirs --help"
+    cleanup_chroot
+END
