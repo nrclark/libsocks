@@ -4,6 +4,7 @@
 #define _POSIX_C_SOURCE 200809L
 
 #include <sys/stat.h>
+#include <sys/types.h>
 #include <unistd.h>
 
 /** @brief Creates a directory (if needed) along with any required parent
