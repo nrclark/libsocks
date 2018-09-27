@@ -42,6 +42,7 @@ TEST_LOG_DRIVER = env AM_TAP_AWK='$(AWK)' $(SHELL) $(top_srcdir)/build-aux/tap-d
 TEST_LOG_DRIVER_FLAGS = --comments
 
 TESTS_ENVIRONMENT = PATH=@srcdir@/test:$(PATH)
-TESTS = test/sample.test test/test-basic.sh test/mkdirs.test test/test_nunit test/test_chdir
+TESTS = test/sample.test test/test-basic.sh test/mkdirs.test \
+    test/test_nunit test/test_chdir test/socks_valgrind.test
 
 EXTRA_DIST = $(TESTS)

@@ -1,0 +1,21 @@
+#!/bin/bash
+source taplib.sh
+cd $(dirname "$0")
+
+SERVER_PID=""
+
+valgrind -q ./server socketfile &
+SERVER_PID=$!
+sleep 2
+
+cleanup() {
+    ./client socketfile shutdown
+    wait -n
+}
+
+trap cleanup INT TERM EXIT
+
+assert_ok "Testing basic server" << END
+    set -e
+    valgrind -q ./client socketfile ping
+END
