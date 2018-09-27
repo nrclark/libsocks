@@ -143,11 +143,11 @@ static int socks_address_make(const char *filename, struct sockaddr_un *result)
 
 static ssize_t socks_recv(int fd, void *buf, size_t bufsize)
 {
-    char header[4];
+    char header[2];
     uint16_t msgsize;
     ssize_t result;
 
-    result = read_count(fd, header, 4);
+    result = read_count(fd, header, 2);
 
     if (result < 0) {
         return result;
@@ -165,11 +165,11 @@ static ssize_t socks_recv(int fd, void *buf, size_t bufsize)
 
 static ssize_t socks_send(int fd, const void *buf, uint16_t nbyte)
 {
-    char header[4];
+    char header[2];
     ssize_t result;
 
     serialize_uint16(nbyte, header);
-    result = write_count(fd, header, 4);
+    result = write_count(fd, header, 2);
 
     if (result < 0) {
         return result;
@@ -299,7 +299,7 @@ int socks_server_process(int socket_fd, socks_callback_t callback)
 {
     int connection_fd;
     ssize_t result;
-    char header[4];
+    char header[2];
     uint16_t msgsize;
 
     connection_fd = accept_noeintr(socket_fd, NULL, NULL);
@@ -308,7 +308,7 @@ int socks_server_process(int socket_fd, socks_callback_t callback)
         return connection_fd;
     }
 
-    result = read_count(connection_fd, header, 4);
+    result = read_count(connection_fd, header, 2);
 
     if (result < 0) {
         return (int) result;
