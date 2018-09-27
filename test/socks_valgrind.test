@@ -4,18 +4,27 @@ cd $(dirname "$0")
 
 SERVER_PID=""
 
-valgrind -q ./server socketfile &
+rm -f socketfile
+valgrind -q ./server socketfile 1>/dev/null &
 SERVER_PID=$!
-sleep 2
+
+# Waiting for the socketfile to appear gives Valgrind time to initialize
+# before moving on to the next step.
+
+while [ ! -e socketfile ]; do
+    sleep 0.1
+done
+
+sleep 0.25
 
 cleanup() {
-    ./client socketfile shutdown
+    ./client socketfile shutdown 1>/dev/null
     wait -n
 }
 
 trap cleanup INT TERM EXIT
 
-assert_ok "Testing basic server" << END
+assert_ok "Testing libsocks client/server under Valgrind" << END
     set -e
-    valgrind -q ./client socketfile ping
+    valgrind -q ./client socketfile ping 1>/dev/null
 END

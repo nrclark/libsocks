@@ -1,0 +1,38 @@
+#!/bin/bash
+source taplib.sh
+cd $(dirname "$0")
+
+rm -f socketfile
+./server socketfile 1>/dev/null &
+SERVER_PID=$!
+
+while [ ! -e socketfile ]; do
+    sleep 0.1
+done
+
+sleep 0.25
+
+cleanup() {
+    ./client socketfile shutdown 1>/dev/null
+    wait -n
+}
+
+trap cleanup INT TERM EXIT
+
+assert_ok "Testing basic libsocks communications" << END
+    set -e
+    ./client socketfile ping | grep -q pong
+END
+
+
+assert_ok "Testing libsocks server blocking/nonblocking modes" << END
+    set -e
+
+    ./client socketfile set_nonblocking | grep -q ok
+    ./client socketfile ping | grep -q pong
+    ./client socketfile pong | grep -q pango
+
+    ./client socketfile set_blocking | grep -q ok
+    ./client socketfile ping | grep -q pong
+    ./client socketfile pong | grep -q pango
+END
