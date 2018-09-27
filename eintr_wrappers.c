@@ -4,8 +4,8 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <sys/select.h>
-#include <sys/stat.h>
 #include <sys/socket.h>
+#include <sys/stat.h>
 #include <unistd.h>
 
 #include "eintr_wrappers.h"
