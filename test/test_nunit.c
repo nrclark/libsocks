@@ -10,6 +10,7 @@ static int basic_test(void)
 
 test_t basic_suite[] = {basic_test, basic_test, NULL};
 
-void nunit_config(void) {
+void nunit_config(void)
+{
     register_suite(basic_suite, "basic_suite", default_setup, default_teardown);
 }

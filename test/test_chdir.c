@@ -34,6 +34,7 @@ static int directory_test(void)
 
 test_t test_suite[] = {directory_test, NULL};
 
-void nunit_config(void) {
+void nunit_config(void)
+{
     register_suite(test_suite, "test_suite", default_setup, default_teardown);
 }
